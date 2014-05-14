@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="ch.uzh.ch.nfcpaymentlib"
+    package="ch.uzh.csg.nfcpaymentlib"
     android:versionCode="1"
     android:versionName="1.0" >
 
