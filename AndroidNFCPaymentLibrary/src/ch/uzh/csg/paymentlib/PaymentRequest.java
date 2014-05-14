@@ -96,7 +96,7 @@ public class PaymentRequest {
 	}
 	
 	private void checkParameters(int version, SignatureAlgorithm signatureAlgorithm, String usernameSeller, String usernameBuyer, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException {
-		if (version < 0 || version > 255)
+		if (version <= 0 || version > 255)
 			throw new IllegalArgumentException("The version number must be between 0 and 255.");
 			
 		if (signatureAlgorithm == null)
@@ -111,13 +111,13 @@ public class PaymentRequest {
 		if (currency == null)
 			throw new IllegalArgumentException("The currency cannot be null.");
 		
-		if (amount == 0)
+		if (amount <= 0)
 			throw new IllegalArgumentException("The amount must be greatern than 0.");
 		
-		if (timestamp == 0)
+		if (timestamp <= 0)
 			throw new IllegalArgumentException("The amount must be greatern than 0.");
 		
-		if (keyNumber < 0 || keyNumber > 255)
+		if (keyNumber <= 0 || keyNumber > 255)
 			throw new IllegalArgumentException("The key number must be between 0 and 255.");
 	}
 
