@@ -12,6 +12,8 @@ import java.util.Map;
 public enum SignatureAlgorithm {
 	SHA256withECDSA("SHA256withECDSA", (byte) 0x01);
 	
+	//TODO: add ecc algorithm!
+	
 	private String description;
 	private byte code;
 	
