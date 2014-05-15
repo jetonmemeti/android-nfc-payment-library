@@ -67,4 +67,18 @@ public enum SignatureAlgorithm {
 		}
 	}
 	
+	/**
+	 * Checks if the given key algorithm is supported.
+	 * 
+	 * @return true if it is supported, false otherwise
+	 */
+	public static boolean isKeyGenAlgorithmSupported(String keyAlgorithm) {
+		for (SignatureAlgorithm algo : values()) {
+			if (algo.getKeyGenAlgorithm().equals(keyAlgorithm)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
 }
