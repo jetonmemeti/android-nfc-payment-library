@@ -1,4 +1,4 @@
-package ch.uzh.csg.paymentlib;
+package ch.uzh.csg.paymentrequest;
 
 /**
  * This class contains the supported currencies.

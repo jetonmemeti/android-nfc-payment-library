@@ -1,4 +1,4 @@
-package ch.uzh.csg.paymentlib;
+package ch.uzh.csg.paymentrequest;
 
 import java.util.HashMap;
 import java.util.Map;
