@@ -11,7 +11,7 @@ import java.util.Map;
  * 
  */
 public enum SignatureAlgorithm {
-	SHA256withECDSA((byte) 0x01, "SHA256withECDSA", "brainpoolp256r1");
+	SHA256withECDSA((byte) 0x01, "brainpoolp256r1", "SHA256withECDSA");
 	
 	private byte code;
 	private String keyGenAlgorithm;
