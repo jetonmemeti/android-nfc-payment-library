@@ -128,6 +128,13 @@ public class PaymentRequest {
 		signature = sig.sign();
 	}
 
+	/**
+	 * Returns the raw payload of this PaymentRequest and attaches the raw
+	 * signature to it.
+	 * 
+	 * @throws NotSignedException
+	 *             if the PaymentRequest was not signed before
+	 */
 	public byte[] encode() throws NotSignedException {
 		if (signature == null)
 			throw new NotSignedException();
@@ -146,6 +153,16 @@ public class PaymentRequest {
 		return result;
 	}
 	
+	/**
+	 * Returns a PaymentRequest (payload and signature) based on the given
+	 * bytes.
+	 * 
+	 * @param bytes
+	 *            the raw data
+	 * @throws IllegalArgumentException
+	 *             if bytes is null or does not contain enough information to
+	 *             create a PaymentRequest.
+	 */
 	public static PaymentRequest decode(byte[] bytes) throws IllegalArgumentException {
 		if (bytes == null)
 			throw new IllegalArgumentException("None of the arguments can be null.");
