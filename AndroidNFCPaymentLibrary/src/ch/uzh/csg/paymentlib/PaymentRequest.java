@@ -122,7 +122,7 @@ public class PaymentRequest {
 	}
 
 	public void sign(PrivateKey privateKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-		Signature sig = Signature.getInstance(SignatureAlgorithm.getSignatureAlgorithm(signatureAlgorithm).getDescription());
+		Signature sig = Signature.getInstance(SignatureAlgorithm.getSignatureAlgorithm(signatureAlgorithm).getSignatureAlgorithm());
 		sig.initSign(privateKey);
 		sig.update(payload);
 		signature = sig.sign();
@@ -199,7 +199,7 @@ public class PaymentRequest {
 	}
 	
 	public boolean verify(PublicKey publicKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-		Signature sig = Signature.getInstance(SignatureAlgorithm.getSignatureAlgorithm(signatureAlgorithm).getDescription());
+		Signature sig = Signature.getInstance(SignatureAlgorithm.getSignatureAlgorithm(signatureAlgorithm).getSignatureAlgorithm());
 		sig.initVerify(publicKey);
 		sig.update(this.payload);
 		return sig.verify(signature);

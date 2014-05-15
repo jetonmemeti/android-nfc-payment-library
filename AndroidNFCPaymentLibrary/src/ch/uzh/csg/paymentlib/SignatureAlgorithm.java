@@ -4,22 +4,23 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * This class contains the supported signature algorithms.
+ * This class contains the supported signature algorithms and the corresponding
+ * asymmetric key algorithm.
  * 
  * @author Jeton
  * 
  */
 public enum SignatureAlgorithm {
-	SHA256withECDSA("SHA256withECDSA", (byte) 0x01);
+	SHA256withECDSA((byte) 0x01, "SHA256withECDSA", "brainpoolp256r1");
 	
-	//TODO: add ecc algorithm!
-	
-	private String description;
 	private byte code;
+	private String keyGenAlgorithm;
+	private String signatureAlgorithm;
 	
-	private SignatureAlgorithm(String description, byte code) {
-		this.description = description;
+	private SignatureAlgorithm(byte code, String keyGenAlgorithm, String signatureAlgorithm) {
 		this.code = code;
+		this.keyGenAlgorithm = keyGenAlgorithm;
+		this.signatureAlgorithm = signatureAlgorithm;
 	}
 	
 	/**
@@ -30,11 +31,17 @@ public enum SignatureAlgorithm {
 	}
 	
 	/**
-	 * Returns the description, which has to be passed to
-	 * Signature.getInstance().
+	 * Returns the algorithm to be used for the asymmetric keys.
 	 */
-	public String getDescription() {
-		return description;
+	public String getKeyGenAlgorithm() {
+		return keyGenAlgorithm;
+	}
+	
+	/**
+	 * Returns the algorithm to be used for the digital signature.
+	 */
+	public String getSignatureAlgorithm() {
+		return signatureAlgorithm;
 	}
 	
 	private static Map<Byte, SignatureAlgorithm> codeAlgorithmMap = null;
