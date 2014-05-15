@@ -10,6 +10,7 @@ import java.security.SignatureException;
 import java.util.ArrayList;
 
 import ch.uzh.csg.nfclib.util.Utils;
+import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.exceptions.NotSignedException;
 
 //TODO: javadoc
