@@ -87,7 +87,7 @@ public class PaymentRequest {
 			throw new IllegalArgumentException("The amount must be greatern than 0.");
 		
 		if (timestamp <= 0)
-			throw new IllegalArgumentException("The amount must be greatern than 0.");
+			throw new IllegalArgumentException("The timestamp must be greatern than 0.");
 		
 		if (keyNumber <= 0 || keyNumber > 255)
 			throw new IllegalArgumentException("The key number must be between 1 and 255.");
