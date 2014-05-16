@@ -5,7 +5,7 @@ package ch.uzh.csg.paymentlib.exceptions;
  * {@link Exception} and is therefore caught. Therefore, it has explicitly to be
  * caught when calling methods which might throw it.
  * 
- * @author Jeton
+ * @author Jeton Memeti
  * 
  */
 public class IllegalArgumentException extends Exception {

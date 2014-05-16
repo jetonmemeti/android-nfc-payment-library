@@ -3,7 +3,7 @@ package ch.uzh.csg.paymentlib.paymentrequest;
 /**
  * This class contains the supported currencies.
  * 
- * @author Jeton
+ * @author Jeton Memeti
  * 
  */
 public enum Currency {

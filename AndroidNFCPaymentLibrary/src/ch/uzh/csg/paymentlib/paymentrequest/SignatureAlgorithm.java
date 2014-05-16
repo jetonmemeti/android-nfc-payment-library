@@ -7,7 +7,7 @@ import java.util.Map;
  * This class contains the supported signature algorithms and the corresponding
  * asymmetric key algorithm.
  * 
- * @author Jeton
+ * @author Jeton Memeti
  * 
  */
 public enum SignatureAlgorithm {
