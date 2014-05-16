@@ -1,5 +1,8 @@
 package ch.uzh.csg.paymentlib.paymentrequest;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * This class contains the supported currencies.
  * 
@@ -20,6 +23,29 @@ public enum Currency {
 	 */
 	public byte getCode() {
 		return code;
+	}
+	
+	private static Map<Byte, Currency> codeCurrencyMap = null;
+	
+	/**
+	 * Returns the Currency object based on the code.
+	 * 
+	 * @param b
+	 *            the code
+	 * @return
+	 */
+	public static Currency getCurrency(byte b) {
+		if (codeCurrencyMap == null)
+			initMap();
+		
+		return codeCurrencyMap.get(b);
+	}
+
+	private static void initMap() {
+		codeCurrencyMap = new HashMap<Byte, Currency>();
+		for (Currency c : values()) {
+			codeCurrencyMap.put(c.getCode(), c);
+		}
 	}
 	
 }
