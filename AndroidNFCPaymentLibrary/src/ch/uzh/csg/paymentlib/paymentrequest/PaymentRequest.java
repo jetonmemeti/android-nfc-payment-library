@@ -56,7 +56,7 @@ public class PaymentRequest {
 
 	private void checkParameters(int version, SignatureAlgorithm signatureAlgorithm, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException {
 		if (version <= 0 || version > 255)
-			throw new IllegalArgumentException("The version number must be between 0 and 255.");
+			throw new IllegalArgumentException("The version number must be between 1 and 255.");
 		
 		if (signatureAlgorithm == null)
 			throw new IllegalArgumentException("The signature algorithm cannot be null.");
