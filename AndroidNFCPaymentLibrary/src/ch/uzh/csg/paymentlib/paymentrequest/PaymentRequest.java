@@ -86,6 +86,7 @@ public class PaymentRequest {
 		byte[] amountBytes = Utils.getLongAsBytes(amount);
 		byte[] timestampBytes = Utils.getLongAsBytes(timestamp);
 		
+		//version + signatureAlgorithm.getCode() + usernamePayer.length + usernamePayer + usernamePayee.length + usernamePayee + currency.getCode() + amount + timestamp + keyNumber
 		int length = 1+1+1+usernamePayerBytes.length+1+usernamePayeeBytes.length+1+8+8+1;
 		byte[] payload = new byte[length];
 		
@@ -149,10 +150,7 @@ public class PaymentRequest {
 		return payload;
 	}
 	
-	protected byte[] getSignature() throws NotSignedException {
-		if (signature == null)
-			throw new NotSignedException();
-		
+	protected byte[] getSignature() {
 		return signature;
 	}
 	
