@@ -27,7 +27,7 @@ public class ServerPaymentRequest {
 
 	public ServerPaymentRequest(PaymentRequest paymentRequestPayer, PaymentRequest paymentRequestPayee) throws IllegalArgumentException {
 		this.version = 1;
-		this.nofSignatures = 1;
+		this.nofSignatures = 2;
 		
 		checkParameters(version, nofSignatures, paymentRequestPayer, paymentRequestPayee);
 		
@@ -35,7 +35,7 @@ public class ServerPaymentRequest {
 		this.paymentRequestPayee = paymentRequestPayee;
 	}
 
-	private void checkParameters(int version, byte nofSignatures, PaymentRequest paymentRequestPayer) throws IllegalArgumentException {
+	private static void checkParameters(int version, byte nofSignatures, PaymentRequest paymentRequestPayer) throws IllegalArgumentException {
 		if (version <= 0 || version > 255)
 			throw new IllegalArgumentException("The version number must be between 1 and 255.");
 		
@@ -45,12 +45,15 @@ public class ServerPaymentRequest {
 		checkPaymentRequest(paymentRequestPayer, "payer");
 	}
 	
-	private void checkParameters(int version, byte nofSignatures, PaymentRequest paymentRequestPayer, PaymentRequest paymentRequestPayee) throws IllegalArgumentException {
+	private static void checkParameters(int version, byte nofSignatures, PaymentRequest paymentRequestPayer, PaymentRequest paymentRequestPayee) throws IllegalArgumentException {
 		checkParameters(version, nofSignatures, paymentRequestPayer);
 		checkPaymentRequest(paymentRequestPayee, "payee");
+		
+		if (!paymentRequestPayee.equals(paymentRequestPayer))
+			throw new IllegalArgumentException("The tow payment requests must be equals.");
 	}
 	
-	private void checkPaymentRequest(PaymentRequest paymentRequest, String role) throws IllegalArgumentException {
+	private static void checkPaymentRequest(PaymentRequest paymentRequest, String role) throws IllegalArgumentException {
 		if (paymentRequest == null)
 			throw new IllegalArgumentException("The "+role+"'s Payment Request can't be null.");
 		
@@ -127,7 +130,7 @@ public class ServerPaymentRequest {
 		return result;
 	}
 	
-	protected static ServerPaymentRequest decode(byte[] bytes) throws IllegalArgumentException {
+	public static ServerPaymentRequest decode(byte[] bytes) throws IllegalArgumentException {
 		if (bytes == null)
 			throw new IllegalArgumentException("The argument can't be null.");
 		
@@ -163,11 +166,12 @@ public class ServerPaymentRequest {
 				paymentRequestPayer[newIndex++] = b;
 			}
 			spr.paymentRequestPayer = PaymentRequest.decode(paymentRequestPayer);
+			checkParameters(spr.version, spr.nofSignatures, spr.paymentRequestPayer);
 			
 			if (spr.nofSignatures > 1) {
 				byte keyNumberPayee = bytes[index++];
 				byte[] paymentRequestPayeePayload = paymentRequestPayerPayload;
-				paymentRequestPayeePayload[paymentRequestPayeePayload.length-2] = keyNumberPayee;
+				paymentRequestPayeePayload[paymentRequestPayeePayload.length-1] = keyNumberPayee;
 				
 				byte[] paymentRequestPayeeSignature = new byte[bytes.length - index];
 				for (int i=0; i<paymentRequestPayeeSignature.length; i++) {
@@ -183,9 +187,10 @@ public class ServerPaymentRequest {
 					paymentRequestPayee[newIndex++] = b;
 				}
 				spr.paymentRequestPayee = PaymentRequest.decode(paymentRequestPayee);
+				checkParameters(spr.version, spr.nofSignatures, spr.paymentRequestPayer, spr.paymentRequestPayee);
 			}
 			
-			return null;
+			return spr;
 		} catch (IndexOutOfBoundsException e) {
 			throw new IllegalArgumentException("The given byte array is corrupt (not long enough).");
 		}
