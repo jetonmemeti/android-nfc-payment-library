@@ -54,7 +54,7 @@ public class PaymentRequest {
 		setPayload();
 	}
 
-	private void checkParameters(int version, SignatureAlgorithm signatureAlgorithm, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException {
+	private static void checkParameters(int version, SignatureAlgorithm signatureAlgorithm, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException {
 		if (version <= 0 || version > 255)
 			throw new IllegalArgumentException("The version number must be between 1 and 255.");
 		
@@ -66,6 +66,9 @@ public class PaymentRequest {
 		
 		if (usernamePayee == null || usernamePayee.length() == 0 || usernamePayee.length() > 255)
 			throw new IllegalArgumentException("The payee's username cannot be null, empty, or longer than 255 characters.");
+		
+		if (usernamePayee.equalsIgnoreCase(usernamePayer))
+			throw new IllegalArgumentException("The payee's username can't be equals to the payer's username.");
 		
 		if (currency == null)
 			throw new IllegalArgumentException("The currency cannot be null.");
@@ -259,12 +262,12 @@ public class PaymentRequest {
 			pr.keyNumber = bytes[index++] & 0xFF;
 			
 			pr.setPayload();
+			checkParameters(pr.version, pr.signatureAlgorithm, pr.usernamePayer, pr.usernamePayee, pr.currency, pr.amount, pr.timestamp, pr.keyNumber);
 			
 			byte[] signature = new byte[bytes.length - index];
 			for (int i=0; i<signature.length; i++) {
 				signature[i] = bytes[index++];
 			}
-			
 			pr.signature = signature;
 			
 			return pr;
