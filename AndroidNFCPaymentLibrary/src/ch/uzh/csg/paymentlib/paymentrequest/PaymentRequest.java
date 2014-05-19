@@ -266,4 +266,30 @@ public class PaymentRequest {
 		}
 	}
 	
+	@Override
+	public boolean equals(Object o) {
+		if (o == null)
+			return false;
+		if (!(o instanceof PaymentRequest))
+			return false;
+		
+		PaymentRequest pr = (PaymentRequest) o;
+		if (this.version != pr.version)
+			return false;
+		if (this.signatureAlgorithm.getCode() != pr.getSignatureAlgorithm().getCode())
+			return false;
+		if (!this.usernamePayer.equals(pr.usernamePayer))
+			return false;
+		if (!this.usernamePayee.equals(pr.usernamePayee))
+			return false;
+		if (this.currency.getCode() != pr.currency.getCode())
+			return false;
+		if (this.amount != pr.amount)
+			return false;
+		if (this.timestamp != pr.timestamp)
+			return false;
+		
+		return true;
+	}
+	
 }
