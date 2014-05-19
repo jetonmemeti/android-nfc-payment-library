@@ -17,8 +17,8 @@ public class PaymentRequest {
 	private int version;
 	private SignatureAlgorithm signatureAlgorithm;
 	
-	private String usernameSeller;
 	private String usernameBuyer;
+	private String usernameSeller;
 	
 	private Currency currency;
 	private long amount;
@@ -35,14 +35,17 @@ public class PaymentRequest {
 	private PaymentRequest() {
 	}
 	
-	//TODO: remove version from constructor? set always to 1?
-	public PaymentRequest(int version, SignatureAlgorithm signatureAlgorithm, String usernameSeller, String usernameBuyer, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException, UnsupportedEncodingException {
-		checkParameters(version, signatureAlgorithm, usernameSeller, usernameBuyer, currency, amount, timestamp, keyNumber);
+	public PaymentRequest(SignatureAlgorithm signatureAlgorithm, String usernameBuyer, String usernameSeller, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException, UnsupportedEncodingException {
+		this(1, signatureAlgorithm, usernameBuyer, usernameSeller, currency, amount, timestamp, keyNumber);
+	}
+	
+	protected PaymentRequest(int version, SignatureAlgorithm signatureAlgorithm, String usernameBuyer, String usernameSeller, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException, UnsupportedEncodingException {
+		checkParameters(version, signatureAlgorithm, usernameBuyer, usernameSeller, currency, amount, timestamp, keyNumber);
 		
 		this.version = version;
 		this.signatureAlgorithm = signatureAlgorithm;
-		this.usernameSeller = usernameSeller;
 		this.usernameBuyer = usernameBuyer;
+		this.usernameSeller = usernameSeller;
 		this.currency = currency;
 		this.amount = amount;
 		this.timestamp = timestamp;
@@ -51,18 +54,18 @@ public class PaymentRequest {
 		setPayload();
 	}
 
-	private void checkParameters(int version, SignatureAlgorithm signatureAlgorithm, String usernameSeller, String usernameBuyer, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException {
+	private void checkParameters(int version, SignatureAlgorithm signatureAlgorithm, String usernameBuyer, String usernameSeller, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException {
 		if (version <= 0 || version > 255)
 			throw new IllegalArgumentException("The version number must be between 0 and 255.");
 		
 		if (signatureAlgorithm == null)
 			throw new IllegalArgumentException("The signature algorithm cannot be null.");
 		
-		if (usernameSeller == null || usernameSeller.length() == 0 || usernameSeller.length() > 255)
-			throw new IllegalArgumentException("The seller's username cannot be null, empty, or longer than 255 characters.");
-		
 		if (usernameBuyer == null || usernameBuyer.length() == 0 || usernameBuyer.length() > 255)
 			throw new IllegalArgumentException("The buyer's username cannot be null, empty, or longer than 255 characters.");
+		
+		if (usernameSeller == null || usernameSeller.length() == 0 || usernameSeller.length() > 255)
+			throw new IllegalArgumentException("The seller's username cannot be null, empty, or longer than 255 characters.");
 		
 		if (currency == null)
 			throw new IllegalArgumentException("The currency cannot be null.");
@@ -78,8 +81,8 @@ public class PaymentRequest {
 	}
 	
 	private void setPayload() throws UnsupportedEncodingException {
-		byte[] usernameSellerBytes = usernameSeller.getBytes("UTF-8");
 		byte[] usernameBuyerBytes = usernameBuyer.getBytes("UTF-8");
+		byte[] usernameSellerBytes = usernameSeller.getBytes("UTF-8");
 		byte[] amountBytes = Utils.getLongAsBytes(amount);
 		byte[] timestampBytes = Utils.getLongAsBytes(timestamp);
 		
@@ -90,12 +93,12 @@ public class PaymentRequest {
 		
 		payload[index++] = (byte) version;
 		payload[index++] = signatureAlgorithm.getCode();
-		payload[index++] = (byte) usernameSellerBytes.length;
-		for (byte b : usernameSellerBytes) {
-			payload[index++] = b;
-		}
 		payload[index++] = (byte) usernameBuyerBytes.length;
 		for (byte b : usernameBuyerBytes) {
+			payload[index++] = b;
+		}
+		payload[index++] = (byte) usernameSellerBytes.length;
+		for (byte b : usernameSellerBytes) {
 			payload[index++] = b;
 		}
 		payload[index++] = currency.getCode();
@@ -108,6 +111,38 @@ public class PaymentRequest {
 		payload[index++] = (byte) keyNumber;
 		
 		this.payload = payload;
+	}
+	
+	protected int getVersion() {
+		return version;
+	}
+
+	protected SignatureAlgorithm getSignatureAlgorithm() {
+		return signatureAlgorithm;
+	}
+
+	protected String getUsernameBuyer() {
+		return usernameBuyer;
+	}
+
+	protected String getUsernameSeller() {
+		return usernameSeller;
+	}
+
+	protected Currency getCurrency() {
+		return currency;
+	}
+
+	protected long getAmount() {
+		return amount;
+	}
+
+	protected long getTimestamp() {
+		return timestamp;
+	}
+
+	protected int getKeyNumber() {
+		return keyNumber;
 	}
 	
 	protected byte[] getPayload() {
@@ -184,19 +219,19 @@ public class PaymentRequest {
 			pr.version = bytes[index++] & 0xFF;
 			pr.signatureAlgorithm = SignatureAlgorithm.getSignatureAlgorithm(bytes[index++]);
 			
-			int usernameSellerLength = bytes[index++] & 0xFF;
-			byte[] usernameSellerBytes = new byte[usernameSellerLength];
-			for (int i=0; i<usernameSellerLength; i++) {
-				usernameSellerBytes[i] = bytes[index++];
-			}
-			pr.usernameSeller = new String(usernameSellerBytes);
-			
 			int usernameBuyerLength = bytes[index++] & 0xFF;
 			byte[] usernameBuyerBytes = new byte[usernameBuyerLength];
 			for (int i=0; i<usernameBuyerLength; i++) {
 				usernameBuyerBytes[i] = bytes[index++];
 			}
 			pr.usernameBuyer = new String(usernameBuyerBytes);
+			
+			int usernameSellerLength = bytes[index++] & 0xFF;
+			byte[] usernameSellerBytes = new byte[usernameSellerLength];
+			for (int i=0; i<usernameSellerLength; i++) {
+				usernameSellerBytes[i] = bytes[index++];
+			}
+			pr.usernameSeller = new String(usernameSellerBytes);
 			
 			pr.currency = Currency.getCurrency(bytes[index++]);
 			
