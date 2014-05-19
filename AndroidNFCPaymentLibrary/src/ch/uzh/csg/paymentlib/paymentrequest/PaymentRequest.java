@@ -17,8 +17,8 @@ public class PaymentRequest {
 	private int version;
 	private SignatureAlgorithm signatureAlgorithm;
 	
-	private String usernameBuyer;
-	private String usernameSeller;
+	private String usernamePayer;
+	private String usernamePayee;
 	
 	private Currency currency;
 	private long amount;
@@ -35,17 +35,17 @@ public class PaymentRequest {
 	private PaymentRequest() {
 	}
 	
-	public PaymentRequest(SignatureAlgorithm signatureAlgorithm, String usernameBuyer, String usernameSeller, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException, UnsupportedEncodingException {
-		this(1, signatureAlgorithm, usernameBuyer, usernameSeller, currency, amount, timestamp, keyNumber);
+	public PaymentRequest(SignatureAlgorithm signatureAlgorithm, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException, UnsupportedEncodingException {
+		this(1, signatureAlgorithm, usernamePayer, usernamePayee, currency, amount, timestamp, keyNumber);
 	}
 	
-	protected PaymentRequest(int version, SignatureAlgorithm signatureAlgorithm, String usernameBuyer, String usernameSeller, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException, UnsupportedEncodingException {
-		checkParameters(version, signatureAlgorithm, usernameBuyer, usernameSeller, currency, amount, timestamp, keyNumber);
+	protected PaymentRequest(int version, SignatureAlgorithm signatureAlgorithm, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException, UnsupportedEncodingException {
+		checkParameters(version, signatureAlgorithm, usernamePayer, usernamePayee, currency, amount, timestamp, keyNumber);
 		
 		this.version = version;
 		this.signatureAlgorithm = signatureAlgorithm;
-		this.usernameBuyer = usernameBuyer;
-		this.usernameSeller = usernameSeller;
+		this.usernamePayer = usernamePayer;
+		this.usernamePayee = usernamePayee;
 		this.currency = currency;
 		this.amount = amount;
 		this.timestamp = timestamp;
@@ -54,18 +54,18 @@ public class PaymentRequest {
 		setPayload();
 	}
 
-	private void checkParameters(int version, SignatureAlgorithm signatureAlgorithm, String usernameBuyer, String usernameSeller, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException {
+	private void checkParameters(int version, SignatureAlgorithm signatureAlgorithm, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException {
 		if (version <= 0 || version > 255)
 			throw new IllegalArgumentException("The version number must be between 0 and 255.");
 		
 		if (signatureAlgorithm == null)
 			throw new IllegalArgumentException("The signature algorithm cannot be null.");
 		
-		if (usernameBuyer == null || usernameBuyer.length() == 0 || usernameBuyer.length() > 255)
-			throw new IllegalArgumentException("The buyer's username cannot be null, empty, or longer than 255 characters.");
+		if (usernamePayer == null || usernamePayer.length() == 0 || usernamePayer.length() > 255)
+			throw new IllegalArgumentException("The payers's username cannot be null, empty, or longer than 255 characters.");
 		
-		if (usernameSeller == null || usernameSeller.length() == 0 || usernameSeller.length() > 255)
-			throw new IllegalArgumentException("The seller's username cannot be null, empty, or longer than 255 characters.");
+		if (usernamePayee == null || usernamePayee.length() == 0 || usernamePayee.length() > 255)
+			throw new IllegalArgumentException("The payee's username cannot be null, empty, or longer than 255 characters.");
 		
 		if (currency == null)
 			throw new IllegalArgumentException("The currency cannot be null.");
@@ -81,24 +81,24 @@ public class PaymentRequest {
 	}
 	
 	private void setPayload() throws UnsupportedEncodingException {
-		byte[] usernameBuyerBytes = usernameBuyer.getBytes("UTF-8");
-		byte[] usernameSellerBytes = usernameSeller.getBytes("UTF-8");
+		byte[] usernamePayerBytes = usernamePayer.getBytes("UTF-8");
+		byte[] usernamePayeeBytes = usernamePayee.getBytes("UTF-8");
 		byte[] amountBytes = Utils.getLongAsBytes(amount);
 		byte[] timestampBytes = Utils.getLongAsBytes(timestamp);
 		
-		int length = 1+1+1+usernameSellerBytes.length+1+usernameBuyerBytes.length+1+8+8+1;
+		int length = 1+1+1+usernamePayerBytes.length+1+usernamePayeeBytes.length+1+8+8+1;
 		byte[] payload = new byte[length];
 		
 		int index = 0;
 		
 		payload[index++] = (byte) version;
 		payload[index++] = signatureAlgorithm.getCode();
-		payload[index++] = (byte) usernameBuyerBytes.length;
-		for (byte b : usernameBuyerBytes) {
+		payload[index++] = (byte) usernamePayerBytes.length;
+		for (byte b : usernamePayerBytes) {
 			payload[index++] = b;
 		}
-		payload[index++] = (byte) usernameSellerBytes.length;
-		for (byte b : usernameSellerBytes) {
+		payload[index++] = (byte) usernamePayeeBytes.length;
+		for (byte b : usernamePayeeBytes) {
 			payload[index++] = b;
 		}
 		payload[index++] = currency.getCode();
@@ -121,12 +121,12 @@ public class PaymentRequest {
 		return signatureAlgorithm;
 	}
 
-	protected String getUsernameBuyer() {
-		return usernameBuyer;
+	protected String getUsernamePayer() {
+		return usernamePayer;
 	}
 
-	protected String getUsernameSeller() {
-		return usernameSeller;
+	protected String getUsernamePayee() {
+		return usernamePayee;
 	}
 
 	protected Currency getCurrency() {
@@ -219,19 +219,19 @@ public class PaymentRequest {
 			pr.version = bytes[index++] & 0xFF;
 			pr.signatureAlgorithm = SignatureAlgorithm.getSignatureAlgorithm(bytes[index++]);
 			
-			int usernameBuyerLength = bytes[index++] & 0xFF;
-			byte[] usernameBuyerBytes = new byte[usernameBuyerLength];
-			for (int i=0; i<usernameBuyerLength; i++) {
-				usernameBuyerBytes[i] = bytes[index++];
+			int usernamePayerLength = bytes[index++] & 0xFF;
+			byte[] usernamePayerBytes = new byte[usernamePayerLength];
+			for (int i=0; i<usernamePayerLength; i++) {
+				usernamePayerBytes[i] = bytes[index++];
 			}
-			pr.usernameBuyer = new String(usernameBuyerBytes);
+			pr.usernamePayer = new String(usernamePayerBytes);
 			
-			int usernameSellerLength = bytes[index++] & 0xFF;
-			byte[] usernameSellerBytes = new byte[usernameSellerLength];
-			for (int i=0; i<usernameSellerLength; i++) {
-				usernameSellerBytes[i] = bytes[index++];
+			int usernamePayeeLength = bytes[index++] & 0xFF;
+			byte[] usernamePayeeBytes = new byte[usernamePayeeLength];
+			for (int i=0; i<usernamePayeeLength; i++) {
+				usernamePayeeBytes[i] = bytes[index++];
 			}
-			pr.usernameSeller = new String(usernameSellerBytes);
+			pr.usernamePayee = new String(usernamePayeeBytes);
 			
 			pr.currency = Currency.getCurrency(bytes[index++]);
 			
