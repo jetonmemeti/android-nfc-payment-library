@@ -128,47 +128,47 @@ public class PaymentRequest {
 		this.payload = payload;
 	}
 	
-	protected int getVersion() {
+	public int getVersion() {
 		return version;
 	}
 
-	protected SignatureAlgorithm getSignatureAlgorithm() {
+	public SignatureAlgorithm getSignatureAlgorithm() {
 		return signatureAlgorithm;
 	}
 
-	protected String getUsernamePayer() {
+	public String getUsernamePayer() {
 		return usernamePayer;
 	}
 
-	protected String getUsernamePayee() {
+	public String getUsernamePayee() {
 		return usernamePayee;
 	}
 
-	protected Currency getCurrency() {
+	public Currency getCurrency() {
 		return currency;
 	}
 
-	protected long getAmount() {
+	public long getAmount() {
 		return amount;
 	}
 
-	protected long getTimestamp() {
+	public long getTimestamp() {
 		return timestamp;
 	}
 
-	protected int getKeyNumber() {
+	public int getKeyNumber() {
 		return keyNumber;
 	}
 	
-	protected byte[] getPayload() {
+	public byte[] getPayload() {
 		return payload;
 	}
 	
-	protected byte[] getSignature() {
+	public byte[] getSignature() {
 		return signature;
 	}
 	
-	public void sign(PrivateKey privateKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, UnsupportedEncodingException {
+	public void sign(PrivateKey privateKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
 		Signature sig = Signature.getInstance(signatureAlgorithm.getSignatureAlgorithm());
 		sig.initSign(privateKey);
 		sig.update(payload);
@@ -199,12 +199,10 @@ public class PaymentRequest {
 		int index = 0;
 		byte[] result = new byte[payload.length+signature.length];
 		for (byte b : payload) {
-			result[index] = b;
-			index++;
+			result[index++] = b;
 		}
 		for (byte b : signature) {
-			result[index] = b;
-			index++;
+			result[index++] = b;
 		}
 		
 		return result;
