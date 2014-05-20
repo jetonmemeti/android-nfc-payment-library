@@ -28,11 +28,10 @@ public enum Currency {
 	private static Map<Byte, Currency> codeCurrencyMap = null;
 	
 	/**
-	 * Returns the Currency object based on the code.
+	 * Returns the Currency based on the code.
 	 * 
 	 * @param b
 	 *            the code
-	 * @return
 	 */
 	public static Currency getCurrency(byte b) {
 		if (codeCurrencyMap == null)
