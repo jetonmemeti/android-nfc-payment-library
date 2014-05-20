@@ -278,6 +278,27 @@ public class PaymentRequest {
 		}
 	}
 	
+	/**
+	 * This method checks that two payment requests are identic regarding a
+	 * payment. The username of payer and payee as well as the currency and the
+	 * amount must be equals in order to return true.
+	 */
+	public boolean requestsIdentic(PaymentRequest pr) {
+		if (pr == null)
+			return false;
+		
+		if (!this.usernamePayer.equals(pr.usernamePayer))
+			return false;
+		if (!this.usernamePayee.equals(pr.usernamePayee))
+			return false;
+		if (this.currency.getCode() != pr.currency.getCode())
+			return false;
+		if (this.amount != pr.amount)
+			return false;
+		
+		return true;
+	}
+	
 	@Override
 	public boolean equals(Object o) {
 		if (o == null)
@@ -299,6 +320,8 @@ public class PaymentRequest {
 		if (this.amount != pr.amount)
 			return false;
 		if (this.timestamp != pr.timestamp)
+			return false;
+		if (this.keyNumber != pr.keyNumber)
 			return false;
 		
 		return true;
