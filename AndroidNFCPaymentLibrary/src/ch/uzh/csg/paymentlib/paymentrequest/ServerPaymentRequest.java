@@ -49,8 +49,8 @@ public class ServerPaymentRequest {
 		checkParameters(version, nofSignatures, paymentRequestPayer);
 		checkPaymentRequest(paymentRequestPayee, "payee");
 		
-		if (!paymentRequestPayee.equals(paymentRequestPayer))
-			throw new IllegalArgumentException("The tow payment requests must be equals.");
+		if (!paymentRequestPayee.requestsIdentic(paymentRequestPayer))
+			throw new IllegalArgumentException("The tow payment requests must be identic.");
 	}
 	
 	private static void checkPaymentRequest(PaymentRequest paymentRequest, String role) throws IllegalArgumentException {
@@ -98,10 +98,12 @@ public class ServerPaymentRequest {
 			 * + paymentRequestPayer.getPayload()
 			 * + paymentRequestPayer.getSignature().length
 			 * + paymentRequestPayer.getSignature()
+			 * + versionPayee
+			 * + signatureAlgorithmPayee
 			 * + keyNumberPayee
 			 * + paymentRequestPayee.getSignature()
 			 */
-			outputLength = 1+1+NOF_BYTES_FOR_PAYLOAD_LENGTH+paymentRequestPayer.getPayload().length+1+paymentRequestPayer.getSignature().length+1+paymentRequestPayee.getSignature().length;
+			outputLength = 1+1+NOF_BYTES_FOR_PAYLOAD_LENGTH+paymentRequestPayer.getPayload().length+1+paymentRequestPayer.getSignature().length+1+1+1+paymentRequestPayee.getSignature().length;
 		}
 		
 		int index = 0;
@@ -122,6 +124,8 @@ public class ServerPaymentRequest {
 			result[index++] = b;
 		}
 		if (nofSignatures > 1) {
+			result[index++] = (byte) paymentRequestPayee.getVersion();
+			result[index++] = paymentRequestPayee.getSignatureAlgorithm().getCode();
 			result[index++] = (byte) paymentRequestPayee.getKeyNumber();
 			for (byte b : paymentRequestPayee.getSignature()) {
 				result[index++] = b;
@@ -166,11 +170,17 @@ public class ServerPaymentRequest {
 				paymentRequestPayer[newIndex++] = b;
 			}
 			spr.paymentRequestPayer = PaymentRequest.decode(paymentRequestPayer);
-			checkParameters(spr.version, spr.nofSignatures, spr.paymentRequestPayer);
 			
-			if (spr.nofSignatures > 1) {
+			if (spr.nofSignatures == 1) {
+				checkParameters(spr.version, spr.nofSignatures, spr.paymentRequestPayer);
+			} else if (spr.nofSignatures == 2) {
+				byte versionPayee = bytes[index++];
+				byte signatureAlgorithmCodePayee = bytes[index++];
 				byte keyNumberPayee = bytes[index++];
+				
 				byte[] paymentRequestPayeePayload = paymentRequestPayerPayload;
+				paymentRequestPayeePayload[0] = versionPayee;
+				paymentRequestPayeePayload[1] = signatureAlgorithmCodePayee;
 				paymentRequestPayeePayload[paymentRequestPayeePayload.length-1] = keyNumberPayee;
 				
 				byte[] paymentRequestPayeeSignature = new byte[bytes.length - index];
@@ -188,6 +198,8 @@ public class ServerPaymentRequest {
 				}
 				spr.paymentRequestPayee = PaymentRequest.decode(paymentRequestPayee);
 				checkParameters(spr.version, spr.nofSignatures, spr.paymentRequestPayer, spr.paymentRequestPayee);
+			} else {
+				throw new IllegalArgumentException("The given byte array is corrupt.");
 			}
 			
 			return spr;
