@@ -14,6 +14,7 @@ import ch.uzh.csg.paymentlib.exceptions.NotSignedException;
 public abstract class SignedSerializableObject extends SerializableObject {
 	
 	private SignatureAlgorithm signatureAlgorithm;
+	private int keyNumber;
 	
 	/*
 	 * payload and signature are not serialized but only hold references in
@@ -26,17 +27,25 @@ public abstract class SignedSerializableObject extends SerializableObject {
 	protected SignedSerializableObject() {
 	}
 
-	public SignedSerializableObject(int version, SignatureAlgorithm signatureAlgorithm) throws IllegalArgumentException {
+	public SignedSerializableObject(int version, SignatureAlgorithm signatureAlgorithm, int keyNumber) throws IllegalArgumentException {
 		super(version);
 		
 		if (signatureAlgorithm == null)
 			throw new IllegalArgumentException("The signature algorithm cannot be null.");
 		
+		if (keyNumber <= 0 || keyNumber > 255)
+			throw new IllegalArgumentException("The key number must be between 1 and 255.");
+		
 		this.signatureAlgorithm = signatureAlgorithm;
+		this.keyNumber = keyNumber;
 	}
 	
 	public SignatureAlgorithm getSignatureAlgorithm() {
 		return signatureAlgorithm;
+	}
+	
+	public int getKeyNumber() {
+		return keyNumber;
 	}
 	
 	public byte[] getPayload() {

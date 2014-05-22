@@ -17,32 +17,30 @@ public class PaymentRequest extends SignedSerializableObject {
 	private Currency currency;
 	private long amount;
 	private long timestamp;
-	private int keyNumber;
 	
 	//this constructor is needed for the DecoderFactory
 	protected PaymentRequest() {
 	}
 
-	public PaymentRequest(SignatureAlgorithm signatureAlgorithm, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException, UnsupportedEncodingException {
-		this(1, signatureAlgorithm, usernamePayer, usernamePayee, currency, amount, timestamp, keyNumber);
+	public PaymentRequest(SignatureAlgorithm signatureAlgorithm, int keyNumber, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp) throws IllegalArgumentException, UnsupportedEncodingException {
+		this(1, signatureAlgorithm, keyNumber, usernamePayer, usernamePayee, currency, amount, timestamp);
 	}
 	
-	private PaymentRequest(int version, SignatureAlgorithm signatureAlgorithm, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException, UnsupportedEncodingException {
-		super(version, signatureAlgorithm);
+	private PaymentRequest(int version, SignatureAlgorithm signatureAlgorithm, int keyNumber, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp) throws IllegalArgumentException, UnsupportedEncodingException {
+		super(version, signatureAlgorithm, keyNumber);
 		
-		checkParameters(usernamePayer, usernamePayee, currency, amount, timestamp, keyNumber);
+		checkParameters(usernamePayer, usernamePayee, currency, amount, timestamp);
 		
 		this.usernamePayer = usernamePayer;
 		this.usernamePayee = usernamePayee;
 		this.currency = currency;
 		this.amount = amount;
 		this.timestamp = timestamp;
-		this.keyNumber = keyNumber;
 		
 		setPayload();
 	}
 
-	private void checkParameters(String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException {
+	private void checkParameters(String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp) throws IllegalArgumentException {
 		if (usernamePayer == null || usernamePayer.length() == 0 || usernamePayer.length() > 255)
 			throw new IllegalArgumentException("The payers's username cannot be null, empty, or longer than 255 characters.");
 		
@@ -60,9 +58,6 @@ public class PaymentRequest extends SignedSerializableObject {
 		
 		if (timestamp <= 0)
 			throw new IllegalArgumentException("The timestamp must be greatern than 0.");
-		
-		if (keyNumber <= 0 || keyNumber > 255)
-			throw new IllegalArgumentException("The key number must be between 1 and 255.");
 	}
 	
 	private void setPayload() throws UnsupportedEncodingException {
@@ -74,6 +69,7 @@ public class PaymentRequest extends SignedSerializableObject {
 		/*
 		 * version
 		 * + signatureAlgorithm.getCode()
+		 * + keyNumber
 		 * + usernamePayer.length
 		 * + usernamePayer
 		 * + usernamePayee.length
@@ -81,7 +77,6 @@ public class PaymentRequest extends SignedSerializableObject {
 		 * + currency.getCode()
 		 * + amount
 		 * + timestamp
-		 * + keyNumber
 		 */
 		int length = 1+1+1+usernamePayerBytes.length+1+usernamePayeeBytes.length+1+8+8+1;
 		byte[] payload = new byte[length];
@@ -90,6 +85,7 @@ public class PaymentRequest extends SignedSerializableObject {
 		
 		payload[index++] = (byte) getVersion();
 		payload[index++] = getSignatureAlgorithm().getCode();
+		payload[index++] = (byte) getKeyNumber();
 		payload[index++] = (byte) usernamePayerBytes.length;
 		for (byte b : usernamePayerBytes) {
 			payload[index++] = b;
@@ -105,7 +101,6 @@ public class PaymentRequest extends SignedSerializableObject {
 		for (byte b : timestampBytes) {
 			payload[index++] = b;
 		}
-		payload[index++] = (byte) keyNumber;
 		
 		this.payload = payload;
 	}
@@ -130,10 +125,6 @@ public class PaymentRequest extends SignedSerializableObject {
 		return timestamp;
 	}
 
-	public int getKeyNumber() {
-		return keyNumber;
-	}
-	
 	@Override
 	public PaymentRequest decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
 		if (bytes == null)
@@ -144,6 +135,7 @@ public class PaymentRequest extends SignedSerializableObject {
 			
 			int version = bytes[index++] & 0xFF;
 			SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.getSignatureAlgorithm(bytes[index++]);
+			int keyNumber = bytes[index++] & 0xFF;
 			
 			int usernamePayerLength = bytes[index++] & 0xFF;
 			byte[] usernamePayerBytes = new byte[usernamePayerLength];
@@ -173,9 +165,7 @@ public class PaymentRequest extends SignedSerializableObject {
 			}
 			long timestamp = Utils.getBytesAsLong(timestampBytes);
 			
-			int keyNumber = bytes[index++] & 0xFF;
-			
-			PaymentRequest pr = new PaymentRequest(version, signatureAlgorithm, usernamePayer, usernamePayee, currency, amount, timestamp, keyNumber);
+			PaymentRequest pr = new PaymentRequest(version, signatureAlgorithm, keyNumber, usernamePayer, usernamePayee, currency, amount, timestamp);
 			
 			int signatureLength = bytes.length - index;
 			if (signatureLength == 0) {
@@ -229,6 +219,8 @@ public class PaymentRequest extends SignedSerializableObject {
 			return false;
 		if (getSignatureAlgorithm().getCode() != pr.getSignatureAlgorithm().getCode())
 			return false;
+		if (getKeyNumber() != pr.getKeyNumber())
+			return false;
 		if (!this.usernamePayer.equals(pr.usernamePayer))
 			return false;
 		if (!this.usernamePayee.equals(pr.usernamePayee))
@@ -238,8 +230,6 @@ public class PaymentRequest extends SignedSerializableObject {
 		if (this.amount != pr.amount)
 			return false;
 		if (this.timestamp != pr.timestamp)
-			return false;
-		if (this.keyNumber != pr.keyNumber)
 			return false;
 		
 		return true;
