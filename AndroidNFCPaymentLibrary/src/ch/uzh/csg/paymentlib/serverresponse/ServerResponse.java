@@ -115,10 +115,30 @@ public class ServerResponse {
 		this.payload = payload;
 	}
 	
+	public int getVersion() {
+		return version;
+	}
+
+	public SignatureAlgorithm getSignatureAlgorithm() {
+		return signatureAlgorithm;
+	}
+
+	public PaymentRequest getPaymentRequest() {
+		return paymentRequest;
+	}
+
+	public ServerResponseStatus getStatus() {
+		return status;
+	}
+
+	public String getReason() {
+		return reason;
+	}
+
 	public byte[] getPayload() {
 		return payload;
 	}
-	
+
 	public byte[] getSignature() {
 		return signature;
 	}
@@ -156,7 +176,7 @@ public class ServerResponse {
 		return result;
 	}
 	
-	public static ServerResponse decode(byte[] bytes) throws IllegalArgumentException {
+	public static ServerResponse decode(byte[] bytes) throws IllegalArgumentException, NotSignedException {
 		if (bytes == null)
 			throw new IllegalArgumentException("The argument can't be null.");
 		
@@ -195,11 +215,16 @@ public class ServerResponse {
 			sr.setPayload();
 			checkParameters(sr.signatureAlgorithm, sr.paymentRequest, sr.status, sr.reason);
 			
-			byte[] signature = new byte[bytes.length - index];
-			for (int i=0; i<signature.length; i++) {
-				signature[i] = bytes[index++];
+			int signatureLength = bytes.length - index;
+			if (signatureLength == 0) {
+				throw new NotSignedException();
+			} else {
+				byte[] signature = new byte[signatureLength];
+				for (int i=0; i<signature.length; i++) {
+					signature[i] = bytes[index++];
+				}
+				sr.signature = signature;
 			}
-			sr.signature = signature;
 			
 			return sr;
 		} catch (IndexOutOfBoundsException e) {

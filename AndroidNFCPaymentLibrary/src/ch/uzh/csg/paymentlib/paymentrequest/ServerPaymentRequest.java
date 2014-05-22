@@ -2,6 +2,7 @@ package ch.uzh.csg.paymentlib.paymentrequest;
 
 import ch.uzh.csg.nfclib.util.Utils;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
+import ch.uzh.csg.paymentlib.exceptions.NotSignedException;
 
 //TODO: javadoc
 public class ServerPaymentRequest {
@@ -134,7 +135,7 @@ public class ServerPaymentRequest {
 		return result;
 	}
 	
-	public static ServerPaymentRequest decode(byte[] bytes) throws IllegalArgumentException {
+	public static ServerPaymentRequest decode(byte[] bytes) throws IllegalArgumentException, NotSignedException {
 		if (bytes == null)
 			throw new IllegalArgumentException("The argument can't be null.");
 		

@@ -217,8 +217,9 @@ public class PaymentRequest {
 	 * @throws IllegalArgumentException
 	 *             if bytes is null or does not contain enough information to
 	 *             create a PaymentRequest.
+	 * @throws NotSignedException 
 	 */
-	public static PaymentRequest decode(byte[] bytes) throws IllegalArgumentException {
+	public static PaymentRequest decode(byte[] bytes) throws IllegalArgumentException, NotSignedException {
 		if (bytes == null)
 			throw new IllegalArgumentException("The argument can't be null.");
 		
@@ -262,11 +263,16 @@ public class PaymentRequest {
 			pr.setPayload();
 			checkParameters(pr.version, pr.signatureAlgorithm, pr.usernamePayer, pr.usernamePayee, pr.currency, pr.amount, pr.timestamp, pr.keyNumber);
 			
-			byte[] signature = new byte[bytes.length - index];
-			for (int i=0; i<signature.length; i++) {
-				signature[i] = bytes[index++];
+			int signatureLength = bytes.length - index;
+			if (signatureLength == 0) {
+				throw new NotSignedException();
+			} else {
+				byte[] signature = new byte[signatureLength];
+				for (int i=0; i<signature.length; i++) {
+					signature[i] = bytes[index++];
+				}
+				pr.signature = signature;
 			}
-			pr.signature = signature;
 			
 			return pr;
 		} catch (IndexOutOfBoundsException e) {
