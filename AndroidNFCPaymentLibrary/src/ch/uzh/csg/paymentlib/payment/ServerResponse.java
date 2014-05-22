@@ -7,7 +7,6 @@ import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.exceptions.NotSignedException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownCurrencyException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownSignatureAlgorithmException;
-import ch.uzh.csg.paymentlib.serverresponse.ServerResponseStatus;
 
 //TODO: javadoc
 public class ServerResponse extends SignedSerializableObject {
