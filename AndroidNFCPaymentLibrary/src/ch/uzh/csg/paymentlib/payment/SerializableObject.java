@@ -4,8 +4,6 @@ import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.exceptions.NotSignedException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownCurrencyException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownSignatureAlgorithmException;
-import ch.uzh.csg.paymentlib.paymentrequest.Currency;
-import ch.uzh.csg.paymentlib.paymentrequest.SignatureAlgorithm;
 
 //TODO: javadoc
 public abstract class SerializableObject {

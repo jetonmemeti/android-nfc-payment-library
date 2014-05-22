@@ -4,7 +4,7 @@ import java.security.PrivateKey;
 import java.util.Random;
 
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
-import ch.uzh.csg.paymentlib.paymentrequest.SignatureAlgorithm;
+import ch.uzh.csg.paymentlib.payment.SignatureAlgorithm;
 
 //TODO: javadoc
 public class UserInfos {

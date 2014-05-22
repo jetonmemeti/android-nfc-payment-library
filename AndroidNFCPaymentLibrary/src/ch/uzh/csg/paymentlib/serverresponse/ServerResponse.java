@@ -15,7 +15,7 @@ import ch.uzh.csg.paymentlib.exceptions.UnknownCurrencyException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownSignatureAlgorithmException;
 import ch.uzh.csg.paymentlib.payment.DecoderFactory;
 import ch.uzh.csg.paymentlib.payment.PaymentRequest;
-import ch.uzh.csg.paymentlib.paymentrequest.SignatureAlgorithm;
+import ch.uzh.csg.paymentlib.payment.SignatureAlgorithm;
 
 //TODO: javadoc
 public class ServerResponse {

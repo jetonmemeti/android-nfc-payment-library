@@ -1,6 +1,6 @@
 package ch.uzh.csg.paymentlib.exceptions;
 
-import ch.uzh.csg.paymentlib.paymentrequest.SignatureAlgorithm;
+import ch.uzh.csg.paymentlib.payment.SignatureAlgorithm;
 
 /**
  * This Exception is thrown when a {@link SignatureAlgorithm} with an unknown code is

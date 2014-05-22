@@ -1,6 +1,6 @@
 package ch.uzh.csg.paymentlib.exceptions;
 
-import ch.uzh.csg.paymentlib.paymentrequest.Currency;
+import ch.uzh.csg.paymentlib.payment.Currency;
 
 /**
  * This Exception is thrown when a {@link Currency} with an unknown code is

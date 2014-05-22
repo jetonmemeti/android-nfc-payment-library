@@ -9,7 +9,6 @@ import java.security.SignatureException;
 
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.exceptions.NotSignedException;
-import ch.uzh.csg.paymentlib.paymentrequest.SignatureAlgorithm;
 
 //TODO: javadoc
 public abstract class SignedSerializableObject extends SerializableObject {
