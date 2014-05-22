@@ -134,30 +134,6 @@ public class PaymentRequest extends SignedSerializableObject {
 		return keyNumber;
 	}
 	
-	/**
-	 * Returns the raw payload of this PaymentRequest and attaches the raw
-	 * signature to it.
-	 * 
-	 * @throws NotSignedException
-	 *             if the PaymentRequest was not signed before
-	 */
-	@Override
-	public byte[] encode() throws NotSignedException {
-		if (signature == null)
-			throw new NotSignedException();
-		
-		int index = 0;
-		byte[] result = new byte[payload.length+signature.length];
-		for (byte b : payload) {
-			result[index++] = b;
-		}
-		for (byte b : signature) {
-			result[index++] = b;
-		}
-		
-		return result;
-	}
-
 	@Override
 	public PaymentRequest decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
 		if (bytes == null)

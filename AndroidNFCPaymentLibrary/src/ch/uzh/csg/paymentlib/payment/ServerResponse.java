@@ -1,47 +1,34 @@
-package ch.uzh.csg.paymentlib.serverresponse;
+package ch.uzh.csg.paymentlib.payment;
 
 import java.io.UnsupportedEncodingException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.SignatureException;
 
 import ch.uzh.csg.nfclib.util.Utils;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.exceptions.NotSignedException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownCurrencyException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownSignatureAlgorithmException;
-import ch.uzh.csg.paymentlib.payment.DecoderFactory;
-import ch.uzh.csg.paymentlib.payment.PaymentRequest;
-import ch.uzh.csg.paymentlib.payment.SignatureAlgorithm;
+import ch.uzh.csg.paymentlib.serverresponse.ServerResponseStatus;
 
 //TODO: javadoc
-public class ServerResponse {
+public class ServerResponse extends SignedSerializableObject {
 	private static final int NOF_BYTES_FOR_PAYMENT_REQUEST_LENGTH = 2; // 2 bytes for the payload length, up to 65536 bytes
 
-	private int version;
-	private SignatureAlgorithm signatureAlgorithm;
 	private PaymentRequest paymentRequest;
 	private ServerResponseStatus status;
 	private String reason;
 	
-	/*
-	 * payload and signature are not serialized but only hold references in
-	 * order to save cpu time
-	 */
-	private byte[] payload;
-	private byte[] signature;
-	
-	private ServerResponse() {
+	//this constructor is needed for the DecoderFactory
+	protected ServerResponse() {
 	}
 	
 	public ServerResponse(SignatureAlgorithm signatureAlgorithm, PaymentRequest paymentRequest, ServerResponseStatus status, String reason) throws IllegalArgumentException, UnsupportedEncodingException {
-		checkParameters(signatureAlgorithm, paymentRequest, status, reason);
+		this(1, signatureAlgorithm, paymentRequest, status, reason);
+	}
+	
+	private ServerResponse(int version, SignatureAlgorithm signatureAlgorithm, PaymentRequest paymentRequest, ServerResponseStatus status, String reason) throws IllegalArgumentException, UnsupportedEncodingException {
+		super(1, signatureAlgorithm);
+		checkParameters(paymentRequest, status, reason);
 		
-		this.version = 1;
-		this.signatureAlgorithm = signatureAlgorithm;
 		this.paymentRequest = paymentRequest;
 		this.status = status;
 		this.reason = reason;
@@ -49,10 +36,7 @@ public class ServerResponse {
 		setPayload();
 	}
 	
-	private static void checkParameters(SignatureAlgorithm signatureAlgorithm, PaymentRequest paymentRequest, ServerResponseStatus status, String reason) throws IllegalArgumentException {
-		if (signatureAlgorithm == null)
-			throw new IllegalArgumentException("The signature algorithm cannot be null.");
-		
+	private static void checkParameters(PaymentRequest paymentRequest, ServerResponseStatus status, String reason) throws IllegalArgumentException {
 		if (paymentRequest == null)
 			throw new IllegalArgumentException("The payment request cannot be null.");
 		
@@ -71,7 +55,7 @@ public class ServerResponse {
 				throw new IllegalArgumentException("The reason cannot be longer than 255 characters.");
 		}
 	}
-
+	
 	private void setPayload() throws UnsupportedEncodingException {
 		/*
 		 * version
@@ -95,8 +79,8 @@ public class ServerResponse {
 		
 		int index = 0;
 		
-		payload[index++] = (byte) version;
-		payload[index++] = signatureAlgorithm.getCode();
+		payload[index++] = (byte) getVersion();
+		payload[index++] = getSignatureAlgorithm().getCode();
 		
 		byte[] paymentRequestLengthBytes = Utils.getShortAsBytes((short) paymentRequest.getPayload().length);
 		for (byte b : paymentRequestLengthBytes) {
@@ -118,77 +102,28 @@ public class ServerResponse {
 		this.payload = payload;
 	}
 	
-	public int getVersion() {
-		return version;
-	}
-
-	public SignatureAlgorithm getSignatureAlgorithm() {
-		return signatureAlgorithm;
-	}
-
 	public PaymentRequest getPaymentRequest() {
 		return paymentRequest;
 	}
-
+	
 	public ServerResponseStatus getStatus() {
 		return status;
 	}
-
+	
 	public String getReason() {
 		return reason;
 	}
-
-	public byte[] getPayload() {
-		return payload;
-	}
-
-	public byte[] getSignature() {
-		return signature;
-	}
-
-	public void sign(PrivateKey privateKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-		Signature sig = Signature.getInstance(signatureAlgorithm.getSignatureAlgorithm());
-		sig.initSign(privateKey);
-		sig.update(payload);
-		signature = sig.sign();
-	}
 	
-	public boolean verify(PublicKey publicKey) throws NotSignedException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-		if (signature == null)
-			throw new NotSignedException();
-		
-		Signature sig = Signature.getInstance(signatureAlgorithm.getSignatureAlgorithm());
-		sig.initVerify(publicKey);
-		sig.update(payload);
-		return sig.verify(signature);
-	}
-	
-	public byte[] encode() throws NotSignedException {
-		if (signature == null)
-			throw new NotSignedException();
-		
-		int index = 0;
-		byte[] result = new byte[payload.length+signature.length];
-		for (byte b : payload) {
-			result[index++] = b;
-		}
-		for (byte b : signature) {
-			result[index++] = b;
-		}
-		
-		return result;
-	}
-	
-	public static ServerResponse decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
+	@Override
+	public ServerResponse decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
 		if (bytes == null)
 			throw new IllegalArgumentException("The argument can't be null.");
 		
 		try {
 			int index = 0;
 			
-			ServerResponse sr = new ServerResponse();
-			sr.version = bytes[index++] & 0xFF;
-			sr.signatureAlgorithm = SignatureAlgorithm.getSignatureAlgorithm(bytes[index++]);
+			int version = bytes[index++];
+			SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.getSignatureAlgorithm(bytes[index++]);
 			
 			byte[] paymentRequestLengthBytes = new byte[NOF_BYTES_FOR_PAYMENT_REQUEST_LENGTH];
 			for (int i=0; i<NOF_BYTES_FOR_PAYMENT_REQUEST_LENGTH; i++) {
@@ -196,27 +131,27 @@ public class ServerResponse {
 			}
 			int paymentRequestLength = Utils.getBytesAsShort(paymentRequestLengthBytes) & 0xFF;
 			
-			byte[] paymentRequest = new byte[paymentRequestLength];
+			byte[] paymentRequestBytes = new byte[paymentRequestLength];
 			for (int i=0; i<paymentRequestLength; i++) {
-				paymentRequest[i] = bytes[index++];
+				paymentRequestBytes[i] = bytes[index++];
 			}
-			sr.paymentRequest = DecoderFactory.decode(PaymentRequest.class, paymentRequest);
+			PaymentRequest paymentRequest = DecoderFactory.decode(PaymentRequest.class, paymentRequestBytes);
 
-			sr.status = ServerResponseStatus.getStatus(bytes[index++]);
+			ServerResponseStatus status = ServerResponseStatus.getStatus(bytes[index++]);
 			
-			if (sr.status == ServerResponseStatus.FAILURE) {
+			String reason;
+			if (status == ServerResponseStatus.FAILURE) {
 				int reasonLength = bytes[index++] & 0xFF;
 				byte[] reasonBytes = new byte[reasonLength];
 				for (int i=0; i<reasonLength; i++) {
 					reasonBytes[i] = bytes[index++];
 				}
-				sr.reason = new String(reasonBytes);
+				reason = new String(reasonBytes);
 			} else {
-				sr.reason = null;
+				reason = null;
 			}
 			
-			sr.setPayload();
-			checkParameters(sr.signatureAlgorithm, sr.paymentRequest, sr.status, sr.reason);
+			ServerResponse sr = new ServerResponse(version, signatureAlgorithm, paymentRequest, status, reason);
 			
 			int signatureLength = bytes.length - index;
 			if (signatureLength == 0) {
@@ -245,9 +180,9 @@ public class ServerResponse {
 			return false;
 		
 		ServerResponse sr = (ServerResponse) o;
-		if (this.version != sr.version)
+		if (getVersion() != sr.getVersion())
 			return false;
-		if (this.signatureAlgorithm.getCode() != sr.signatureAlgorithm.getCode())
+		if (getSignatureAlgorithm().getCode() != sr.getSignatureAlgorithm().getCode())
 			return false;
 		if (!this.paymentRequest.equals(sr.paymentRequest))
 			return false;
