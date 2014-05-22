@@ -1,21 +1,17 @@
-package ch.uzh.csg.paymentlib.paymentrequest;
+package ch.uzh.csg.paymentlib.payment;
 
 import java.io.UnsupportedEncodingException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.SignatureException;
 
 import ch.uzh.csg.nfclib.util.Utils;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.exceptions.NotSignedException;
+import ch.uzh.csg.paymentlib.exceptions.UnknownCurrencyException;
+import ch.uzh.csg.paymentlib.exceptions.UnknownSignatureAlgorithmException;
+import ch.uzh.csg.paymentlib.paymentrequest.Currency;
+import ch.uzh.csg.paymentlib.paymentrequest.SignatureAlgorithm;
 
 //TODO: javadoc
-public class PaymentRequest {
-	private int version;
-	private SignatureAlgorithm signatureAlgorithm;
+public class PaymentRequest extends SignedSerializableObject {
 	
 	private String usernamePayer;
 	private String usernamePayee;
@@ -25,25 +21,19 @@ public class PaymentRequest {
 	private long timestamp;
 	private int keyNumber;
 	
-	/*
-	 * payload and signature are not serialized but only hold references in
-	 * order to save cpu time
-	 */
-	private byte[] payload;
-	private byte[] signature;
-	
-	private PaymentRequest() {
+	//this constructor is needed for the DecoderFactory
+	protected PaymentRequest() {
 	}
-	
+
 	public PaymentRequest(SignatureAlgorithm signatureAlgorithm, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException, UnsupportedEncodingException {
 		this(1, signatureAlgorithm, usernamePayer, usernamePayee, currency, amount, timestamp, keyNumber);
 	}
 	
-	protected PaymentRequest(int version, SignatureAlgorithm signatureAlgorithm, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException, UnsupportedEncodingException {
-		checkParameters(version, signatureAlgorithm, usernamePayer, usernamePayee, currency, amount, timestamp, keyNumber);
+	private PaymentRequest(int version, SignatureAlgorithm signatureAlgorithm, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException, UnsupportedEncodingException {
+		super(version, signatureAlgorithm);
 		
-		this.version = version;
-		this.signatureAlgorithm = signatureAlgorithm;
+		checkParameters(usernamePayer, usernamePayee, currency, amount, timestamp, keyNumber);
+		
 		this.usernamePayer = usernamePayer;
 		this.usernamePayee = usernamePayee;
 		this.currency = currency;
@@ -54,13 +44,7 @@ public class PaymentRequest {
 		setPayload();
 	}
 
-	private static void checkParameters(int version, SignatureAlgorithm signatureAlgorithm, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException {
-		if (version <= 0 || version > 255)
-			throw new IllegalArgumentException("The version number must be between 1 and 255.");
-		
-		if (signatureAlgorithm == null)
-			throw new IllegalArgumentException("The signature algorithm cannot be null.");
-		
+	private void checkParameters(String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp, int keyNumber) throws IllegalArgumentException {
 		if (usernamePayer == null || usernamePayer.length() == 0 || usernamePayer.length() > 255)
 			throw new IllegalArgumentException("The payers's username cannot be null, empty, or longer than 255 characters.");
 		
@@ -106,8 +90,8 @@ public class PaymentRequest {
 		
 		int index = 0;
 		
-		payload[index++] = (byte) version;
-		payload[index++] = signatureAlgorithm.getCode();
+		payload[index++] = (byte) getVersion();
+		payload[index++] = getSignatureAlgorithm().getCode();
 		payload[index++] = (byte) usernamePayerBytes.length;
 		for (byte b : usernamePayerBytes) {
 			payload[index++] = b;
@@ -128,14 +112,6 @@ public class PaymentRequest {
 		this.payload = payload;
 	}
 	
-	public int getVersion() {
-		return version;
-	}
-
-	public SignatureAlgorithm getSignatureAlgorithm() {
-		return signatureAlgorithm;
-	}
-
 	public String getUsernamePayer() {
 		return usernamePayer;
 	}
@@ -160,31 +136,6 @@ public class PaymentRequest {
 		return keyNumber;
 	}
 	
-	public byte[] getPayload() {
-		return payload;
-	}
-	
-	public byte[] getSignature() {
-		return signature;
-	}
-	
-	public void sign(PrivateKey privateKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-		Signature sig = Signature.getInstance(signatureAlgorithm.getSignatureAlgorithm());
-		sig.initSign(privateKey);
-		sig.update(payload);
-		signature = sig.sign();
-	}
-	
-	public boolean verify(PublicKey publicKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, NotSignedException {
-		if (signature == null)
-			throw new NotSignedException();
-		
-		Signature sig = Signature.getInstance(signatureAlgorithm.getSignatureAlgorithm());
-		sig.initVerify(publicKey);
-		sig.update(this.payload);
-		return sig.verify(signature);
-	}
-	
 	/**
 	 * Returns the raw payload of this PaymentRequest and attaches the raw
 	 * signature to it.
@@ -192,6 +143,7 @@ public class PaymentRequest {
 	 * @throws NotSignedException
 	 *             if the PaymentRequest was not signed before
 	 */
+	@Override
 	public byte[] encode() throws NotSignedException {
 		if (signature == null)
 			throw new NotSignedException();
@@ -208,60 +160,48 @@ public class PaymentRequest {
 		return result;
 	}
 
-	/**
-	 * Returns a PaymentRequest (payload and signature) based on the given
-	 * bytes.
-	 * 
-	 * @param bytes
-	 *            the raw data
-	 * @throws IllegalArgumentException
-	 *             if bytes is null or does not contain enough information to
-	 *             create a PaymentRequest.
-	 * @throws NotSignedException 
-	 */
-	public static PaymentRequest decode(byte[] bytes) throws IllegalArgumentException, NotSignedException {
+	@Override
+	public PaymentRequest decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
 		if (bytes == null)
 			throw new IllegalArgumentException("The argument can't be null.");
 		
 		try {
 			int index = 0;
 			
-			PaymentRequest pr = new PaymentRequest();
-			pr.version = bytes[index++] & 0xFF;
-			pr.signatureAlgorithm = SignatureAlgorithm.getSignatureAlgorithm(bytes[index++]);
+			int version = bytes[index++] & 0xFF;
+			SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.getSignatureAlgorithm(bytes[index++]);
 			
 			int usernamePayerLength = bytes[index++] & 0xFF;
 			byte[] usernamePayerBytes = new byte[usernamePayerLength];
 			for (int i=0; i<usernamePayerLength; i++) {
 				usernamePayerBytes[i] = bytes[index++];
 			}
-			pr.usernamePayer = new String(usernamePayerBytes);
+			String usernamePayer = new String(usernamePayerBytes);
 			
 			int usernamePayeeLength = bytes[index++] & 0xFF;
 			byte[] usernamePayeeBytes = new byte[usernamePayeeLength];
 			for (int i=0; i<usernamePayeeLength; i++) {
 				usernamePayeeBytes[i] = bytes[index++];
 			}
-			pr.usernamePayee = new String(usernamePayeeBytes);
+			String usernamePayee = new String(usernamePayeeBytes);
 			
-			pr.currency = Currency.getCurrency(bytes[index++]);
+			Currency currency = Currency.getCurrency(bytes[index++]);
 			
 			byte[] amountBytes = new byte[Long.SIZE / Byte.SIZE]; //8 bytes (long)
 			for (int i=0; i<amountBytes.length; i++) {
 				amountBytes[i] = bytes[index++];
 			}
-			pr.amount = Utils.getBytesAsLong(amountBytes);
+			long amount = Utils.getBytesAsLong(amountBytes);
 			
 			byte[] timestampBytes = new byte[Long.SIZE / Byte.SIZE]; //8 bytes (long)
 			for (int i=0; i<timestampBytes.length; i++) {
 				timestampBytes[i] = bytes[index++];
 			}
-			pr.timestamp = Utils.getBytesAsLong(timestampBytes);
+			long timestamp = Utils.getBytesAsLong(timestampBytes);
 			
-			pr.keyNumber = bytes[index++] & 0xFF;
+			int keyNumber = bytes[index++] & 0xFF;
 			
-			pr.setPayload();
-			checkParameters(pr.version, pr.signatureAlgorithm, pr.usernamePayer, pr.usernamePayee, pr.currency, pr.amount, pr.timestamp, pr.keyNumber);
+			PaymentRequest pr = new PaymentRequest(version, signatureAlgorithm, usernamePayer, usernamePayee, currency, amount, timestamp, keyNumber);
 			
 			int signatureLength = bytes.length - index;
 			if (signatureLength == 0) {
@@ -311,9 +251,9 @@ public class PaymentRequest {
 			return false;
 		
 		PaymentRequest pr = (PaymentRequest) o;
-		if (this.version != pr.version)
+		if (getVersion() != pr.getVersion())
 			return false;
-		if (this.signatureAlgorithm.getCode() != pr.getSignatureAlgorithm().getCode())
+		if (getSignatureAlgorithm().getCode() != pr.getSignatureAlgorithm().getCode())
 			return false;
 		if (!this.usernamePayer.equals(pr.usernamePayer))
 			return false;

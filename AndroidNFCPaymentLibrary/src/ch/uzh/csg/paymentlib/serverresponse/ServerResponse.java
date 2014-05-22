@@ -11,7 +11,10 @@ import java.security.SignatureException;
 import ch.uzh.csg.nfclib.util.Utils;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.exceptions.NotSignedException;
-import ch.uzh.csg.paymentlib.paymentrequest.PaymentRequest;
+import ch.uzh.csg.paymentlib.exceptions.UnknownCurrencyException;
+import ch.uzh.csg.paymentlib.exceptions.UnknownSignatureAlgorithmException;
+import ch.uzh.csg.paymentlib.payment.DecoderFactory;
+import ch.uzh.csg.paymentlib.payment.PaymentRequest;
 import ch.uzh.csg.paymentlib.paymentrequest.SignatureAlgorithm;
 
 //TODO: javadoc
@@ -176,7 +179,7 @@ public class ServerResponse {
 		return result;
 	}
 	
-	public static ServerResponse decode(byte[] bytes) throws IllegalArgumentException, NotSignedException {
+	public static ServerResponse decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
 		if (bytes == null)
 			throw new IllegalArgumentException("The argument can't be null.");
 		
@@ -197,8 +200,8 @@ public class ServerResponse {
 			for (int i=0; i<paymentRequestLength; i++) {
 				paymentRequest[i] = bytes[index++];
 			}
-			sr.paymentRequest = PaymentRequest.decode(paymentRequest);
-			
+			sr.paymentRequest = DecoderFactory.decode(PaymentRequest.class, paymentRequest);
+
 			sr.status = ServerResponseStatus.getStatus(bytes[index++]);
 			
 			if (sr.status == ServerResponseStatus.FAILURE) {

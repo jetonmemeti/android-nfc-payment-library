@@ -3,6 +3,10 @@ package ch.uzh.csg.paymentlib.paymentrequest;
 import ch.uzh.csg.nfclib.util.Utils;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.exceptions.NotSignedException;
+import ch.uzh.csg.paymentlib.exceptions.UnknownCurrencyException;
+import ch.uzh.csg.paymentlib.exceptions.UnknownSignatureAlgorithmException;
+import ch.uzh.csg.paymentlib.payment.DecoderFactory;
+import ch.uzh.csg.paymentlib.payment.PaymentRequest;
 
 //TODO: javadoc
 public class ServerPaymentRequest {
@@ -135,7 +139,7 @@ public class ServerPaymentRequest {
 		return result;
 	}
 	
-	public static ServerPaymentRequest decode(byte[] bytes) throws IllegalArgumentException, NotSignedException {
+	public static ServerPaymentRequest decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownCurrencyException, UnknownSignatureAlgorithmException {
 		if (bytes == null)
 			throw new IllegalArgumentException("The argument can't be null.");
 		
@@ -170,7 +174,7 @@ public class ServerPaymentRequest {
 			for (byte b : paymentRequestPayerSignature) {
 				paymentRequestPayer[newIndex++] = b;
 			}
-			spr.paymentRequestPayer = PaymentRequest.decode(paymentRequestPayer);
+			spr.paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, paymentRequestPayer);
 			
 			if (spr.nofSignatures == 1) {
 				checkParameters(spr.version, spr.nofSignatures, spr.paymentRequestPayer);
@@ -197,7 +201,7 @@ public class ServerPaymentRequest {
 				for (byte b : paymentRequestPayeeSignature) {
 					paymentRequestPayee[newIndex++] = b;
 				}
-				spr.paymentRequestPayee = PaymentRequest.decode(paymentRequestPayee);
+				spr.paymentRequestPayee = DecoderFactory.decode(PaymentRequest.class, paymentRequestPayee);
 				checkParameters(spr.version, spr.nofSignatures, spr.paymentRequestPayer, spr.paymentRequestPayee);
 			} else {
 				throw new IllegalArgumentException("The given byte array is corrupt.");
