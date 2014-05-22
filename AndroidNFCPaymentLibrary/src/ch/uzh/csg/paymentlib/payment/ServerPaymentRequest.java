@@ -1,64 +1,65 @@
-package ch.uzh.csg.paymentlib.paymentrequest;
+package ch.uzh.csg.paymentlib.payment;
 
 import ch.uzh.csg.nfclib.util.Utils;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.exceptions.NotSignedException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownCurrencyException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownSignatureAlgorithmException;
-import ch.uzh.csg.paymentlib.payment.DecoderFactory;
-import ch.uzh.csg.paymentlib.payment.PaymentRequest;
 
 //TODO: javadoc
-public class ServerPaymentRequest {
+public class ServerPaymentRequest extends SerializableObject {
 	private static final int NOF_BYTES_FOR_PAYLOAD_LENGTH = 2; // 2 bytes for the payload length, up to 65536 bytes
 	
-	private int version;
 	private byte nofSignatures;
 	
 	private PaymentRequest paymentRequestPayer;
 	private PaymentRequest paymentRequestPayee;
 	
-	private ServerPaymentRequest() {
+	//this constructor is needed for the DecoderFactory
+	protected ServerPaymentRequest() {
+	}
+	
+	private ServerPaymentRequest(int version, PaymentRequest paymentRequestPayer) throws IllegalArgumentException {
+		super(version);
+		this.nofSignatures = 1;
+		checkParameters(nofSignatures, paymentRequestPayer);
+		this.paymentRequestPayer = paymentRequestPayer;
 	}
 	
 	public ServerPaymentRequest(PaymentRequest paymentRequestPayer) throws IllegalArgumentException {
-		this.version = 1;
-		this.nofSignatures = 1;
-		
-		checkParameters(version, nofSignatures, paymentRequestPayer);
-		
-		this.paymentRequestPayer = paymentRequestPayer;
+		this(1, paymentRequestPayer);
 	}
-
-	public ServerPaymentRequest(PaymentRequest paymentRequestPayer, PaymentRequest paymentRequestPayee) throws IllegalArgumentException {
-		this.version = 1;
+	
+	private ServerPaymentRequest(int version, PaymentRequest paymentRequestPayer, PaymentRequest paymentRequestPayee) throws IllegalArgumentException {
+		super(version);
 		this.nofSignatures = 2;
 		
-		checkParameters(version, nofSignatures, paymentRequestPayer, paymentRequestPayee);
+		checkParameters(nofSignatures, paymentRequestPayer, paymentRequestPayee);
 		
 		this.paymentRequestPayer = paymentRequestPayer;
 		this.paymentRequestPayee = paymentRequestPayee;
 	}
-
-	private static void checkParameters(int version, byte nofSignatures, PaymentRequest paymentRequestPayer) throws IllegalArgumentException {
-		if (version <= 0 || version > 255)
-			throw new IllegalArgumentException("The version number must be between 1 and 255.");
-		
+	
+	public ServerPaymentRequest(PaymentRequest paymentRequestPayer, PaymentRequest paymentRequestPayee) throws IllegalArgumentException {
+		this(1, paymentRequestPayer, paymentRequestPayee);
+	}
+	
+	private void checkParameters(byte nofSignatures, PaymentRequest paymentRequestPayer) throws IllegalArgumentException {
 		if (nofSignatures <= 0 || nofSignatures > 2)
 			throw new IllegalArgumentException("The Server Payment Request can only handle 1 or 2 signatures.");
 		
 		checkPaymentRequest(paymentRequestPayer, "payer");
 	}
 	
-	private static void checkParameters(int version, byte nofSignatures, PaymentRequest paymentRequestPayer, PaymentRequest paymentRequestPayee) throws IllegalArgumentException {
-		checkParameters(version, nofSignatures, paymentRequestPayer);
+	private void checkParameters(byte nofSignatures, PaymentRequest paymentRequestPayer, PaymentRequest paymentRequestPayee) throws IllegalArgumentException {
+		checkParameters(nofSignatures, paymentRequestPayer);
 		checkPaymentRequest(paymentRequestPayee, "payee");
 		
 		if (!paymentRequestPayee.requestsIdentic(paymentRequestPayer))
 			throw new IllegalArgumentException("The tow payment requests must be identic.");
 	}
 	
-	private static void checkPaymentRequest(PaymentRequest paymentRequest, String role) throws IllegalArgumentException {
+	private void checkPaymentRequest(PaymentRequest paymentRequest, String role) throws IllegalArgumentException {
 		if (paymentRequest == null)
 			throw new IllegalArgumentException("The "+role+"'s Payment Request can't be null.");
 		
@@ -75,6 +76,10 @@ public class ServerPaymentRequest {
 			throw new IllegalArgumentException("The "+role+"'s signature is too long. A signature algorithm with output longer than 255 bytes is not supported.");
 	}
 	
+	public byte getNofSignatures() {
+		return nofSignatures;
+	}
+	
 	public PaymentRequest getPaymentRequestPayer() {
 		return paymentRequestPayer;
 	}
@@ -82,8 +87,9 @@ public class ServerPaymentRequest {
 	public PaymentRequest getPaymentRequestPayee() {
 		return paymentRequestPayee;
 	}
-	
-	public byte[] encode() {
+
+	@Override
+	public byte[] encode() throws NotSignedException {
 		int outputLength;
 		if (nofSignatures == 1) {
 			/*
@@ -114,7 +120,7 @@ public class ServerPaymentRequest {
 		int index = 0;
 		byte[] result = new byte[outputLength];
 		
-		result[index++] = (byte) version;
+		result[index++] = (byte) getVersion();
 		result[index++] = nofSignatures;
 		
 		byte[] paloadLengthBytes = Utils.getShortAsBytes((short) paymentRequestPayer.getPayload().length);
@@ -138,18 +144,17 @@ public class ServerPaymentRequest {
 		}
 		return result;
 	}
-	
-	public static ServerPaymentRequest decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownCurrencyException, UnknownSignatureAlgorithmException {
+
+	@Override
+	public ServerPaymentRequest decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
 		if (bytes == null)
 			throw new IllegalArgumentException("The argument can't be null.");
 		
 		try {
 			int index = 0;
 			
-			ServerPaymentRequest spr = new ServerPaymentRequest();
-			
-			spr.version = (bytes[index++] & 0xFF);
-			spr.nofSignatures = bytes[index++];
+			int version = (bytes[index++] & 0xFF);
+			byte nofSignatures = bytes[index++];
 			
 			byte[] indicatedPayloadLength = new byte[NOF_BYTES_FOR_PAYLOAD_LENGTH];
 			for (int i=0; i<NOF_BYTES_FOR_PAYLOAD_LENGTH; i++) {
@@ -166,19 +171,20 @@ public class ServerPaymentRequest {
 				paymentRequestPayerSignature[i] = bytes[index++];
 			}
 			
-			byte[] paymentRequestPayer = new byte[paymentRequestPayerPayloadLength+paymentRequestPayerSignatureLength];
+			byte[] paymentRequestPayerBytes = new byte[paymentRequestPayerPayloadLength+paymentRequestPayerSignatureLength];
 			int newIndex = 0;
 			for (byte b : paymentRequestPayerPayload) {
-				paymentRequestPayer[newIndex++] = b;
+				paymentRequestPayerBytes[newIndex++] = b;
 			}
 			for (byte b : paymentRequestPayerSignature) {
-				paymentRequestPayer[newIndex++] = b;
+				paymentRequestPayerBytes[newIndex++] = b;
 			}
-			spr.paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, paymentRequestPayer);
 			
-			if (spr.nofSignatures == 1) {
-				checkParameters(spr.version, spr.nofSignatures, spr.paymentRequestPayer);
-			} else if (spr.nofSignatures == 2) {
+			PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, paymentRequestPayerBytes);
+			
+			if (nofSignatures == 1) {
+				return new ServerPaymentRequest(version, paymentRequestPayer);
+			} else if (nofSignatures == 2) {
 				byte versionPayee = bytes[index++];
 				byte signatureAlgorithmCodePayee = bytes[index++];
 				byte keyNumberPayee = bytes[index++];
@@ -193,21 +199,19 @@ public class ServerPaymentRequest {
 					paymentRequestPayeeSignature[i] = bytes[index++];
 				}
 				
-				byte[] paymentRequestPayee = new byte[paymentRequestPayeePayload.length + paymentRequestPayeeSignature.length];
+				byte[] paymentRequestPayeeBytes = new byte[paymentRequestPayeePayload.length + paymentRequestPayeeSignature.length];
 				newIndex = 0;
 				for (byte b : paymentRequestPayeePayload) {
-					paymentRequestPayee[newIndex++] = b;
+					paymentRequestPayeeBytes[newIndex++] = b;
 				}
 				for (byte b : paymentRequestPayeeSignature) {
-					paymentRequestPayee[newIndex++] = b;
+					paymentRequestPayeeBytes[newIndex++] = b;
 				}
-				spr.paymentRequestPayee = DecoderFactory.decode(PaymentRequest.class, paymentRequestPayee);
-				checkParameters(spr.version, spr.nofSignatures, spr.paymentRequestPayer, spr.paymentRequestPayee);
+				PaymentRequest paymentRequestPayee = DecoderFactory.decode(PaymentRequest.class, paymentRequestPayeeBytes);
+				return new ServerPaymentRequest(version, paymentRequestPayer, paymentRequestPayee);
 			} else {
 				throw new IllegalArgumentException("The given byte array is corrupt.");
 			}
-			
-			return spr;
 		} catch (IndexOutOfBoundsException e) {
 			throw new IllegalArgumentException("The given byte array is corrupt (not long enough).");
 		}
