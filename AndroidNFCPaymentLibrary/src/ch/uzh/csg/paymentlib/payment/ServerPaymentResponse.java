@@ -9,7 +9,7 @@ import ch.uzh.csg.paymentlib.exceptions.UnknownCurrencyException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownSignatureAlgorithmException;
 
 //TODO: javadoc
-public class ServerResponse extends SignedSerializableObject {
+public class ServerPaymentResponse extends SignedSerializableObject {
 	private static final int NOF_BYTES_FOR_PAYMENT_REQUEST_LENGTH = 2; // 2 bytes for the payload length, up to 65536 bytes
 
 	private PaymentRequest paymentRequest;
@@ -17,14 +17,14 @@ public class ServerResponse extends SignedSerializableObject {
 	private String reason;
 	
 	//this constructor is needed for the DecoderFactory
-	protected ServerResponse() {
+	protected ServerPaymentResponse() {
 	}
 	
-	public ServerResponse(SignatureAlgorithm signatureAlgorithm, PaymentRequest paymentRequest, ServerResponseStatus status, String reason) throws IllegalArgumentException, UnsupportedEncodingException {
+	public ServerPaymentResponse(SignatureAlgorithm signatureAlgorithm, PaymentRequest paymentRequest, ServerResponseStatus status, String reason) throws IllegalArgumentException, UnsupportedEncodingException {
 		this(1, signatureAlgorithm, paymentRequest, status, reason);
 	}
 	
-	private ServerResponse(int version, SignatureAlgorithm signatureAlgorithm, PaymentRequest paymentRequest, ServerResponseStatus status, String reason) throws IllegalArgumentException, UnsupportedEncodingException {
+	private ServerPaymentResponse(int version, SignatureAlgorithm signatureAlgorithm, PaymentRequest paymentRequest, ServerResponseStatus status, String reason) throws IllegalArgumentException, UnsupportedEncodingException {
 		super(1, signatureAlgorithm);
 		checkParameters(paymentRequest, status, reason);
 		
@@ -114,7 +114,7 @@ public class ServerResponse extends SignedSerializableObject {
 	}
 	
 	@Override
-	public ServerResponse decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
+	public ServerPaymentResponse decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
 		if (bytes == null)
 			throw new IllegalArgumentException("The argument can't be null.");
 		
@@ -150,7 +150,7 @@ public class ServerResponse extends SignedSerializableObject {
 				reason = null;
 			}
 			
-			ServerResponse sr = new ServerResponse(version, signatureAlgorithm, paymentRequest, status, reason);
+			ServerPaymentResponse sr = new ServerPaymentResponse(version, signatureAlgorithm, paymentRequest, status, reason);
 			
 			int signatureLength = bytes.length - index;
 			if (signatureLength == 0) {
@@ -175,10 +175,10 @@ public class ServerResponse extends SignedSerializableObject {
 	public boolean equals(Object o) {
 		if (o == null)
 			return false;
-		if (!(o instanceof ServerResponse))
+		if (!(o instanceof ServerPaymentResponse))
 			return false;
 		
-		ServerResponse sr = (ServerResponse) o;
+		ServerPaymentResponse sr = (ServerPaymentResponse) o;
 		if (getVersion() != sr.getVersion())
 			return false;
 		if (getSignatureAlgorithm().getCode() != sr.getSignatureAlgorithm().getCode())
