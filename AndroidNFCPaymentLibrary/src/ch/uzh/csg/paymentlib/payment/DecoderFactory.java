@@ -9,12 +9,14 @@ import ch.uzh.csg.paymentlib.exceptions.UnknownSignatureAlgorithmException;
 public class DecoderFactory {
 	
 	@SuppressWarnings("unchecked")
-	public static <T extends SerializableObject> T decode(Class<? extends SerializableObject> clazz, byte[] bytes) throws IllegalAccessException, IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
+	public static <T extends SerializableObject> T decode(Class<? extends SerializableObject> clazz, byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
 		try {
 			T t = (T) clazz.newInstance();
 			t.decode(bytes);
 			return t;
 		} catch (InstantiationException e) {
+			return null;
+		} catch (IllegalAccessException e) {
 			return null;
 		}
 	}
