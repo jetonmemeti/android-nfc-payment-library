@@ -3,6 +3,8 @@ package ch.uzh.csg.paymentlib.paymentrequest;
 import java.util.HashMap;
 import java.util.Map;
 
+import ch.uzh.csg.paymentlib.exceptions.UnknownSignatureAlgorithmException;
+
 /**
  * This class contains the supported signature algorithms and the corresponding
  * asymmetric key algorithm.
@@ -52,12 +54,18 @@ public enum SignatureAlgorithm {
 	 * @param b
 	 *            the code of the algorithm
 	 * @return
+	 * @throws UnknownSignatureAlgorithmException
+	 *             if the given code is not known
 	 */
-	public static SignatureAlgorithm getSignatureAlgorithm(byte b) {
+	public static SignatureAlgorithm getSignatureAlgorithm(byte b) throws UnknownSignatureAlgorithmException {
 		if (codeAlgorithmMap == null)
 			initMap();
 		
-		return codeAlgorithmMap.get(b);
+		SignatureAlgorithm signatureAlgorithm = codeAlgorithmMap.get(b);
+		if (signatureAlgorithm == null)
+			throw new UnknownSignatureAlgorithmException();
+		else
+			return signatureAlgorithm;
 	}
 
 	private static void initMap() {

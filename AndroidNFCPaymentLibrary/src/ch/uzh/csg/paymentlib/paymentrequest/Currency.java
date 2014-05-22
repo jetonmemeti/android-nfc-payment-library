@@ -3,6 +3,8 @@ package ch.uzh.csg.paymentlib.paymentrequest;
 import java.util.HashMap;
 import java.util.Map;
 
+import ch.uzh.csg.paymentlib.exceptions.UnknownCurrencyException;
+
 /**
  * This class contains the supported currencies.
  * 
@@ -32,12 +34,18 @@ public enum Currency {
 	 * 
 	 * @param b
 	 *            the code
+	 * @throws UnknownCurrencyException
+	 *             if the given code is not known
 	 */
-	public static Currency getCurrency(byte b) {
+	public static Currency getCurrency(byte b) throws UnknownCurrencyException {
 		if (codeCurrencyMap == null)
 			initMap();
 		
-		return codeCurrencyMap.get(b);
+		Currency currency = codeCurrencyMap.get(b);
+		if (currency == null)
+			throw new UnknownCurrencyException();
+		else
+			return currency;
 	}
 
 	private static void initMap() {
