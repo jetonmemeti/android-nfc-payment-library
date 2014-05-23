@@ -45,7 +45,7 @@ public class PaymentRequestInitializer {
 	private PaymentInfos paymentInfos;
 	
 	private NfcTransceiver nfcTransceiver;
-	private int nofMessage;
+	private int nofMessages;
 	
 	public PaymentRequestInitializer(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NoNfcException, NfcNotEnabledException {
 		if (activity == null)
@@ -74,7 +74,7 @@ public class PaymentRequestInitializer {
 		this.serverInfos = serverInfos;
 		this.paymentInfos = paymentInfos;
 		
-		this.nofMessage = 0;
+		this.nofMessages = 0;
 		
 		initPayment();
 	}
@@ -112,7 +112,7 @@ public class PaymentRequestInitializer {
 			case CONNECTION_LOST: // do nothing, because new session can be initiated automatically!
 			case MESSAGE_RETURNED: // do nothing, concerns only the HCE
 			case MESSAGE_SENT:
-				nofMessage++;
+				nofMessages++;
 				break;
 			case INITIALIZED:
 				nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.DEFAULT, getInitMessage()).getData());
@@ -124,7 +124,7 @@ public class PaymentRequestInitializer {
 					//TODO: implement
 				}
 				
-				switch (nofMessage) {
+				switch (nofMessages) {
 				case 1:
 					try {
 						PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, response.getData());
@@ -156,6 +156,8 @@ public class PaymentRequestInitializer {
 			int index = 0;
 			byte[] result = new byte[userInfos.getUsername().length()+1+8];
 			
+			//TODO: add username.length!! --> refactor!! --> create InitMessage??
+			//TODO: InitMessagePayer, InitMessagePayee, use encode/decode stuff!!
 			byte[] username = userInfos.getUsername().getBytes(Charset.forName("UTF-8"));
 			
 			result[index++] = (byte) userInfos.getUsername().length();
