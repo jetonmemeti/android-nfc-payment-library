@@ -4,6 +4,7 @@ package ch.uzh.csg.paymentlib;
 public enum PaymentEvent {
 	ERROR,
 	SUCCESS,
+	FORWARD_TO_SERVER,
 	REFUSED_BY_SERVER,
 	REFUSED_BY_PAYER;
 }
