@@ -203,6 +203,8 @@ public class PaymentRequest extends SignedSerializableObject {
 			return false;
 		if (this.amount != pr.amount)
 			return false;
+		if (this.timestamp != pr.timestamp)
+			return false;
 		
 		return true;
 	}
