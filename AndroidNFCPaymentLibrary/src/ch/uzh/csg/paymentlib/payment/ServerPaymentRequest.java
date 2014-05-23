@@ -217,4 +217,26 @@ public class ServerPaymentRequest extends SerializableObject {
 		}
 	}
 	
+	@Override
+	public boolean equals(Object o) {
+		if (o == null)
+			return false;
+		if (!(o instanceof ServerPaymentRequest))
+			return false;
+		
+		ServerPaymentRequest spr = (ServerPaymentRequest) o;
+		if (getVersion() != spr.getVersion())
+			return false;
+		if (this.nofSignatures != spr.nofSignatures)
+			return false;
+		if (!getPaymentRequestPayer().equals(spr.getPaymentRequestPayer()))
+			return false;
+		if (nofSignatures == 2) {
+			if (!getPaymentRequestPayee().equals(spr.getPaymentRequestPayee()))
+				return false;
+		}
+		
+		return true;
+	}
+	
 }

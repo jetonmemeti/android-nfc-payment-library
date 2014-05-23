@@ -83,25 +83,38 @@ public class PaymentResponse extends SignedSerializableObject {
 		byte[] amountBytes = Utils.getLongAsBytes(amount);
 		byte[] timestampBytes = Utils.getLongAsBytes(timestamp);
 		
-		/*
-		 * version
-		 * + signatureAlgorithm.getCode()
-		 * + keyNumber
-		 * + status
-		 * + reason.length
-		 * + reason
-		 * + usernamePayer.length
-		 * + usernamePayer
-		 * + usernamePayee.length
-		 * + usernamePayee
-		 * + currency.getCode()
-		 * + amount
-		 * + timestamp
-		 */
 		int length;
 		if (status == ServerResponseStatus.SUCCESS) {
+			/*
+			 * version
+			 * + signatureAlgorithm.getCode()
+			 * + keyNumber
+			 * + status
+			 * + reason.length
+			 * + reason
+			 * + usernamePayer.length
+			 * + usernamePayer
+			 * + currency.getCode()
+			 * + amount
+			 * + timestamp
+			 */
 			length = 1+1+1+1+1+usernamePayerBytes.length+1+usernamePayeeBytes.length+1+8+8;
 		} else {
+			/*
+			 * version
+			 * + signatureAlgorithm.getCode()
+			 * + keyNumber
+			 * + status
+			 * + reason.length
+			 * + reason
+			 * + usernamePayer.length
+			 * + usernamePayer
+			 * + usernamePayee.length
+			 * + usernamePayee
+			 * + currency.getCode()
+			 * + amount
+			 * + timestamp
+			 */
 			reasonBytes = reason.getBytes("UTF-8");
 			length = 1+1+1+1+1+reasonBytes.length+1+usernamePayerBytes.length+1+usernamePayeeBytes.length+1+8+8;
 		}
@@ -240,6 +253,34 @@ public class PaymentResponse extends SignedSerializableObject {
 		} catch (UnsupportedEncodingException e) {
 			throw new IllegalArgumentException("The given byte array is corrupt.");
 		}
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (o == null)
+			return false;
+		if (!(o instanceof PaymentResponse))
+			return false;
+		
+		PaymentResponse pr = (PaymentResponse) o;
+		if (getVersion() != pr.getVersion())
+			return false;
+		if (getSignatureAlgorithm().getCode() != pr.getSignatureAlgorithm().getCode())
+			return false;
+		if (getKeyNumber() != pr.getKeyNumber())
+			return false;
+		if (!this.usernamePayer.equals(pr.usernamePayer))
+			return false;
+		if (!this.usernamePayee.equals(pr.usernamePayee))
+			return false;
+		if (this.currency.getCode() != pr.currency.getCode())
+			return false;
+		if (this.amount != pr.amount)
+			return false;
+		if (this.timestamp != pr.timestamp)
+			return false;
+		
+		return true;
 	}
 	
 }
