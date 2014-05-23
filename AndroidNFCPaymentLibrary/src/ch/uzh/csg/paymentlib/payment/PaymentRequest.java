@@ -1,6 +1,6 @@
 package ch.uzh.csg.paymentlib.payment;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 
 import ch.uzh.csg.nfclib.util.Utils;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
@@ -22,11 +22,11 @@ public class PaymentRequest extends SignedSerializableObject {
 	protected PaymentRequest() {
 	}
 
-	public PaymentRequest(SignatureAlgorithm signatureAlgorithm, int keyNumber, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp) throws IllegalArgumentException, UnsupportedEncodingException {
+	public PaymentRequest(SignatureAlgorithm signatureAlgorithm, int keyNumber, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp) throws IllegalArgumentException {
 		this(1, signatureAlgorithm, keyNumber, usernamePayer, usernamePayee, currency, amount, timestamp);
 	}
 	
-	private PaymentRequest(int version, SignatureAlgorithm signatureAlgorithm, int keyNumber, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp) throws IllegalArgumentException, UnsupportedEncodingException {
+	private PaymentRequest(int version, SignatureAlgorithm signatureAlgorithm, int keyNumber, String usernamePayer, String usernamePayee, Currency currency, long amount, long timestamp) throws IllegalArgumentException {
 		super(version, signatureAlgorithm, keyNumber);
 		
 		checkParameters(usernamePayer, usernamePayee, currency, amount, timestamp);
@@ -60,9 +60,9 @@ public class PaymentRequest extends SignedSerializableObject {
 			throw new IllegalArgumentException("The timestamp must be greatern than 0.");
 	}
 	
-	private void setPayload() throws UnsupportedEncodingException {
-		byte[] usernamePayerBytes = usernamePayer.getBytes("UTF-8");
-		byte[] usernamePayeeBytes = usernamePayee.getBytes("UTF-8");
+	private void setPayload() {
+		byte[] usernamePayerBytes = usernamePayer.getBytes(Charset.forName("UTF-8"));
+		byte[] usernamePayeeBytes = usernamePayee.getBytes(Charset.forName("UTF-8"));
 		byte[] amountBytes = Utils.getLongAsBytes(amount);
 		byte[] timestampBytes = Utils.getLongAsBytes(timestamp);
 		
@@ -181,8 +181,6 @@ public class PaymentRequest extends SignedSerializableObject {
 			return pr;
 		} catch (IndexOutOfBoundsException e) {
 			throw new IllegalArgumentException("The given byte array is corrupt (not long enough).");
-		} catch (UnsupportedEncodingException e) {
-			throw new IllegalArgumentException("The given byte array is corrupt.");
 		}
 	}
 	
