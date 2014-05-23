@@ -192,7 +192,7 @@ public class ServerPaymentRequest extends SerializableObject {
 				byte[] paymentRequestPayeePayload = paymentRequestPayerPayload;
 				paymentRequestPayeePayload[0] = versionPayee;
 				paymentRequestPayeePayload[1] = signatureAlgorithmCodePayee;
-				paymentRequestPayeePayload[paymentRequestPayeePayload.length-1] = keyNumberPayee;
+				paymentRequestPayeePayload[2] = keyNumberPayee;
 				
 				byte[] paymentRequestPayeeSignature = new byte[bytes.length - index];
 				for (int i=0; i<paymentRequestPayeeSignature.length; i++) {
