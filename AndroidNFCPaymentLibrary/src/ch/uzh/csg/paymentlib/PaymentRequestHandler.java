@@ -7,6 +7,8 @@ import ch.uzh.csg.nfclib.NfcEvent;
 import ch.uzh.csg.nfclib.NfcEventHandler;
 import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
+import ch.uzh.csg.paymentlib.payment.DecoderFactory;
+import ch.uzh.csg.paymentlib.payment.InitMessagePayer;
 
 //TODO: javadoc
 public class PaymentRequestHandler {
@@ -43,7 +45,12 @@ public class PaymentRequestHandler {
 				
 				switch (nofMessages) {
 				case 1:
-					byte[] initBytes = pm.getData();
+					try {
+						DecoderFactory.decode(InitMessagePayer.class, pm.getData());
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						
+					}
 					
 					
 					

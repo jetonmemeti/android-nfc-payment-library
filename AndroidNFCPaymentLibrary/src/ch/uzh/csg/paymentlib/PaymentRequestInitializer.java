@@ -1,6 +1,5 @@
 package ch.uzh.csg.paymentlib;
 
-import java.nio.charset.Charset;
 import java.security.Signature;
 
 import android.app.Activity;
@@ -11,13 +10,13 @@ import ch.uzh.csg.nfclib.exceptions.NoNfcException;
 import ch.uzh.csg.nfclib.transceiver.ExternalNfcTransceiver;
 import ch.uzh.csg.nfclib.transceiver.InternalNfcTransceiver;
 import ch.uzh.csg.nfclib.transceiver.NfcTransceiver;
-import ch.uzh.csg.nfclib.util.Utils;
 import ch.uzh.csg.paymentlib.container.PaymentInfos;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
 import ch.uzh.csg.paymentlib.payment.DecoderFactory;
+import ch.uzh.csg.paymentlib.payment.InitMessagePayer;
 import ch.uzh.csg.paymentlib.payment.PaymentRequest;
 import ch.uzh.csg.paymentlib.payment.PaymentResponse;
 import ch.uzh.csg.paymentlib.payment.ServerPaymentRequest;
@@ -115,7 +114,12 @@ public class PaymentRequestInitializer {
 				nofMessages++;
 				break;
 			case INITIALIZED:
-				nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.DEFAULT, getInitMessage()).getData());
+				try {
+					InitMessagePayer initMessage = new InitMessagePayer(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
+					nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.DEFAULT, initMessage.encode()).getData());
+				} catch (Exception e) {
+					//TODO: implement
+				}
 				break;
 			case MESSAGE_RECEIVED:
 				// TODO: send next message
@@ -151,28 +155,6 @@ public class PaymentRequestInitializer {
 				break;
 			}
 		}
-		
-		private byte[] getInitMessage() {
-			int index = 0;
-			byte[] result = new byte[userInfos.getUsername().length()+1+8];
-			
-			//TODO: add username.length!! --> refactor!! --> create InitMessage??
-			//TODO: InitMessagePayer, InitMessagePayee, use encode/decode stuff!!
-			byte[] username = userInfos.getUsername().getBytes(Charset.forName("UTF-8"));
-			
-			result[index++] = (byte) userInfos.getUsername().length();
-			for (byte b : username) {
-				result[index++] = b;
-			}
-			result[index++] = paymentInfos.getCurrency().getCode();
-			byte[] longAsBytes = Utils.getLongAsBytes(paymentInfos.getAmount());
-			for (byte b : longAsBytes) {
-				result[index++] = b;
-			}
-			
-			return result;
-		}
-		
 	};
 	
 	public void onServerResponse(byte[] bytes) {
