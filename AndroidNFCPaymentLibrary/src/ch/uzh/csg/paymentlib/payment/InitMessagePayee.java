@@ -8,17 +8,17 @@ import ch.uzh.csg.paymentlib.exceptions.NotSignedException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownCurrencyException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownSignatureAlgorithmException;
 
-public class InitMessagePayer extends SerializableObject {
+public class InitMessagePayee extends SerializableObject {
 	
 	private String username;
 	private Currency currency;
 	private long amount;
 	
-	public InitMessagePayer(String username, Currency currency, long amount) throws IllegalArgumentException {
+	public InitMessagePayee(String username, Currency currency, long amount) throws IllegalArgumentException {
 		this(1, username, currency, amount);
 	}
 	
-	private InitMessagePayer(int version, String username, Currency currency, long amount) throws IllegalArgumentException {
+	private InitMessagePayee(int version, String username, Currency currency, long amount) throws IllegalArgumentException {
 		super(version);
 		checkParameters(username, currency, amount);
 		
@@ -78,7 +78,7 @@ public class InitMessagePayer extends SerializableObject {
 	}
 
 	@Override
-	public InitMessagePayer decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
+	public InitMessagePayee decode(byte[] bytes) throws IllegalArgumentException, NotSignedException, UnknownSignatureAlgorithmException, UnknownCurrencyException {
 		try {
 			int index = 0;
 			
@@ -97,7 +97,7 @@ public class InitMessagePayer extends SerializableObject {
 			}
 			long amount = Utils.getBytesAsLong(amountBytes);
 			
-			return new InitMessagePayer(version, username, currency, amount);
+			return new InitMessagePayee(version, username, currency, amount);
 		} catch (IndexOutOfBoundsException e) {
 			throw new IllegalArgumentException("The given byte array is corrupt (not long enough).");
 		}

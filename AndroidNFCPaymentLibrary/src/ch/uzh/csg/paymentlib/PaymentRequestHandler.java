@@ -14,7 +14,7 @@ import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.messages.PaymentError;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
 import ch.uzh.csg.paymentlib.payment.DecoderFactory;
-import ch.uzh.csg.paymentlib.payment.InitMessagePayer;
+import ch.uzh.csg.paymentlib.payment.InitMessagePayee;
 import ch.uzh.csg.paymentlib.payment.PaymentRequest;
 import ch.uzh.csg.paymentlib.payment.PaymentResponse;
 
@@ -131,7 +131,7 @@ public class PaymentRequestHandler {
 				switch (nofMessages) {
 				case 1:
 					try {
-						InitMessagePayer initMessage = DecoderFactory.decode(InitMessagePayer.class, pm.getData());
+						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.getData());
 						boolean accepted = userPrompt.handlePaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
 						if (accepted) {
 							//TODO: handle timestamp!!

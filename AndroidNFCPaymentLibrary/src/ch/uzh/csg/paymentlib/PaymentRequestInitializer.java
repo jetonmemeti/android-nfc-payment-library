@@ -17,7 +17,7 @@ import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.messages.PaymentError;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
 import ch.uzh.csg.paymentlib.payment.DecoderFactory;
-import ch.uzh.csg.paymentlib.payment.InitMessagePayer;
+import ch.uzh.csg.paymentlib.payment.InitMessagePayee;
 import ch.uzh.csg.paymentlib.payment.PaymentRequest;
 import ch.uzh.csg.paymentlib.payment.PaymentResponse;
 import ch.uzh.csg.paymentlib.payment.ServerPaymentRequest;
@@ -129,7 +129,7 @@ public class PaymentRequestInitializer {
 			case INITIALIZED:
 				//TODO: store current payment session, in order to be able to detect a resume!
 				try {
-					InitMessagePayer initMessage = new InitMessagePayer(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
+					InitMessagePayee initMessage = new InitMessagePayee(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
 					nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.DEFAULT, initMessage.encode()).getData());
 				} catch (Exception e) {
 					sendError(PaymentError.UNEXPECTED_ERROR);
