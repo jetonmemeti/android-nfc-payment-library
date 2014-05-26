@@ -14,6 +14,10 @@ public class InitMessagePayee extends SerializableObject {
 	private Currency currency;
 	private long amount;
 	
+	//this constructor is needed for the DecoderFactory
+	protected InitMessagePayee() {
+	}
+	
 	public InitMessagePayee(String username, Currency currency, long amount) throws IllegalArgumentException {
 		this(1, username, currency, amount);
 	}
