@@ -14,6 +14,7 @@ import ch.uzh.csg.paymentlib.container.PaymentInfos;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
+import ch.uzh.csg.paymentlib.messages.PaymentError;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
 import ch.uzh.csg.paymentlib.payment.DecoderFactory;
 import ch.uzh.csg.paymentlib.payment.InitMessagePayer;
@@ -45,8 +46,25 @@ public class PaymentRequestInitializer {
 	
 	private NfcTransceiver nfcTransceiver;
 	private int nofMessages;
+	private boolean aborted;
 	
 	public PaymentRequestInitializer(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NoNfcException, NfcNotEnabledException {
+		checkParameters(activity, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
+		
+		this.paymentType = type;
+		this.activity = activity;
+		this.paymentEventHandler = paymentEventHandler;
+		this.userInfos = userInfos;
+		this.serverInfos = serverInfos;
+		this.paymentInfos = paymentInfos;
+		
+		this.nofMessages = 0;
+		this.aborted = false;
+		
+		initPayment();
+	}
+
+	private void checkParameters(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException {
 		if (activity == null)
 			throw new IllegalArgumentException("The activity cannot be null.");
 		
@@ -64,18 +82,6 @@ public class PaymentRequestInitializer {
 		
 		if (type == null)
 			throw new IllegalArgumentException("The payment type cannot be null.");
-		
-		this.paymentType = type;
-		
-		this.activity = activity;
-		this.paymentEventHandler = paymentEventHandler;
-		this.userInfos = userInfos;
-		this.serverInfos = serverInfos;
-		this.paymentInfos = paymentInfos;
-		
-		this.nofMessages = 0;
-		
-		initPayment();
 	}
 	
 	private void initPayment() throws NoNfcException, NfcNotEnabledException {
@@ -85,48 +91,67 @@ public class PaymentRequestInitializer {
 		else
 			nfcEventHandler = nfcEventHandlerSend;
 		
-		
-		if (ExternalNfcTransceiver.isExternalReaderAttached(activity)) {
+		if (ExternalNfcTransceiver.isExternalReaderAttached(activity))
 			nfcTransceiver = new ExternalNfcTransceiver(nfcEventHandler, userInfos.getUserId());
-		} else {
+		else
 			nfcTransceiver = new InternalNfcTransceiver(nfcEventHandler, userInfos.getUserId());
-		}
 		
 		nfcTransceiver.enable(activity);
-		//TODO: implement
+	}
+	
+	private void sendError(PaymentError err) {
+		aborted = true;
+		nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.ERROR, new byte[] { err.getCode() }).getData());
+		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
 	}
 	
 	private NfcEventHandler nfcEventHandlerRequest = new NfcEventHandler() {
 		
 		@Override
 		public void handleMessage(NfcEvent event, Object object) {
+			if (aborted)
+				return;
+			
 			switch (event) {
 			case INIT_FAILED:
 			case COMMUNICATION_ERROR:
 			case ERROR_REPORTED:
-				// TODO: abort everything
+				aborted = true;
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
 				nfcTransceiver.disable(activity);
 				break;
 			case CONNECTION_LOST: // do nothing, because new session can be initiated automatically!
 			case MESSAGE_RETURNED: // do nothing, concerns only the HCE
+				break;
 			case MESSAGE_SENT:
 				nofMessages++;
 				break;
 			case INITIALIZED:
+				//TODO: store current payment session, in order to be able to detect a resume!
 				try {
 					InitMessagePayer initMessage = new InitMessagePayer(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
 					nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.DEFAULT, initMessage.encode()).getData());
 				} catch (Exception e) {
-					//TODO: implement
+					sendError(PaymentError.UNEXPECTED_ERROR);
 				}
 				break;
 			case MESSAGE_RECEIVED:
-				// TODO: send next message
-				PaymentMessage response = (PaymentMessage) object;;
-				if (response.isError()) {
-					//TODO: implement
+				//TODO: send next message
+				
+				if (object == null || !(object instanceof byte[])) {
+					sendError(PaymentError.UNEXPECTED_ERROR);
+					return;
 				}
+				
+				PaymentMessage response = new PaymentMessage((byte[]) object);
+				if (response.isError()) {
+					//TODO: forward error event (e.g. payer refused the payment!)
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
+					nfcTransceiver.disable(activity);
+				}
+				
+				//TODO: implement
+//				pm.isResume();
 				
 				switch (nofMessages) {
 				case 1:
@@ -134,22 +159,20 @@ public class PaymentRequestInitializer {
 						PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, response.getData());
 						PaymentRequest paymentRequestPayee = new PaymentRequest(userInfos.getSignatureAlgorithm(), userInfos.getKeyNumber(), paymentRequestPayer.getUsernamePayer(), userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentRequestPayer.getTimestamp());
 						if (!paymentRequestPayer.requestsIdentic(paymentRequestPayee)) {
-							//TODO: implement
+							sendError(PaymentError.REQUESTS_NOT_IDENTIC);
+						} else {
+							paymentRequestPayee.sign(userInfos.getPrivateKey());
+							ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
+							paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode());
 						}
-						
-						paymentRequestPayee.sign(userInfos.getPrivateKey());
-						
-						ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
-						paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode());
 					} catch (Exception e) {
-						//TODO: implement
+						sendError(PaymentError.UNEXPECTED_ERROR);
 					}
 					break;
 				case 2:
-					//TODO: wait for ack
-					nfcTransceiver.disable(activity);
-					//TODO: differentiate between success/failure?
+					//TODO: check ACK?
 					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, null);
+					nfcTransceiver.disable(activity);
 					break;
 				}
 				break;
@@ -172,13 +195,13 @@ public class PaymentRequestInitializer {
 			
 			boolean signatureValid = sig.verify(paymentResponse.getSignature());
 			if (!signatureValid) {
-				//TODO: handle this
+				sendError(PaymentError.UNEXPECTED_ERROR);
 			} else {
 				byte[] encode = serverPaymentResponse.getPaymentResponsePayer().encode();
 				nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.DEFAULT, encode).getData());
 			}
 		} catch (Exception e) {
-			//TODO: implement
+			sendError(PaymentError.UNEXPECTED_ERROR);
 		}
 	}
 
