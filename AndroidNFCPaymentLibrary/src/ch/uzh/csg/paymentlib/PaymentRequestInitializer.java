@@ -49,6 +49,15 @@ public class PaymentRequestInitializer {
 	private boolean aborted;
 	
 	public PaymentRequestInitializer(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NoNfcException, NfcNotEnabledException {
+		this(activity, null, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
+	}
+	
+	/*
+	 * This constructor is only for test purposes, in order to mock the
+	 * NfcTransceiver. For productive use the public constructor, otherwise the
+	 * NFC will not work.
+	 */
+	protected PaymentRequestInitializer(Activity activity, NfcTransceiver nfcTransceiver, PaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NoNfcException, NfcNotEnabledException {
 		checkParameters(activity, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
 		
 		this.paymentType = type;
@@ -61,7 +70,7 @@ public class PaymentRequestInitializer {
 		this.nofMessages = 0;
 		this.aborted = false;
 		
-		initPayment();
+		initPayment(nfcTransceiver);
 	}
 
 	private void checkParameters(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException {
@@ -84,19 +93,26 @@ public class PaymentRequestInitializer {
 			throw new IllegalArgumentException("The payment type cannot be null.");
 	}
 	
-	private void initPayment() throws NoNfcException, NfcNotEnabledException {
+	private void initPayment(NfcTransceiver nfcTransceiver) throws NoNfcException, NfcNotEnabledException {
 		NfcEventHandler nfcEventHandler;
 		if (this.paymentType == PaymentType.REQUEST_PAYMENT)
 			nfcEventHandler = nfcEventHandlerRequest;
 		else
 			nfcEventHandler = nfcEventHandlerSend;
 		
-		if (ExternalNfcTransceiver.isExternalReaderAttached(activity))
-			nfcTransceiver = new ExternalNfcTransceiver(nfcEventHandler, userInfos.getUserId());
-		else
-			nfcTransceiver = new InternalNfcTransceiver(nfcEventHandler, userInfos.getUserId());
+		if (nfcTransceiver != null) {
+			this.nfcTransceiver = nfcTransceiver;
+		} else {
+			if (ExternalNfcTransceiver.isExternalReaderAttached(activity))
+				this.nfcTransceiver = new ExternalNfcTransceiver(nfcEventHandler, userInfos.getUserId());
+			else
+				this.nfcTransceiver = new InternalNfcTransceiver(nfcEventHandler, userInfos.getUserId());
+			
+			this.nfcTransceiver.enable(activity);
+		}
 		
-		nfcTransceiver.enable(activity);
+		//TODO: initNfc!!
+//		this.nfcTransceiver.initNfc();
 	}
 	
 	private void sendError(PaymentError err) {
