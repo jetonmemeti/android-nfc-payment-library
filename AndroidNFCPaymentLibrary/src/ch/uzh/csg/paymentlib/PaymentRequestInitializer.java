@@ -110,15 +110,19 @@ public class PaymentRequestInitializer {
 			
 			this.nfcTransceiver.enable(activity);
 		}
-		
-		//TODO: initNfc!!
-//		this.nfcTransceiver.initNfc();
 	}
 	
 	private void sendError(PaymentError err) {
 		aborted = true;
 		nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.ERROR, new byte[] { err.getCode() }).getData());
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
+	}
+	
+	/*
+	 * only for test purposes
+	 */
+	protected NfcEventHandler getNfcEventHandlerRequest() {
+		return nfcEventHandlerRequest;
 	}
 	
 	private NfcEventHandler nfcEventHandlerRequest = new NfcEventHandler() {
