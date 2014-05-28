@@ -1,7 +1,6 @@
 package ch.uzh.csg.paymentlib;
 
 import java.nio.charset.Charset;
-import java.security.Signature;
 
 import android.app.Activity;
 import ch.uzh.csg.nfclib.CustomHostApduService;
@@ -149,11 +148,7 @@ public class PaymentRequestHandler {
 					try {
 						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, message);
 						
-						Signature sig = Signature.getInstance(paymentResponse.getSignatureAlgorithm().getSignatureAlgorithm());
-						sig.initVerify(serverInfos.getPublicKey());
-						sig.update(paymentResponse.getPayload());
-						
-						boolean signatureValid = sig.verify(paymentResponse.getSignature());
+						boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
 						if (!signatureValid) {
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {

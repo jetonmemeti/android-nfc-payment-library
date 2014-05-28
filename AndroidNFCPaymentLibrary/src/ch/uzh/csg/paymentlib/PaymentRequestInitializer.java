@@ -165,8 +165,7 @@ public class PaymentRequestInitializer {
 				
 				PaymentMessage response = new PaymentMessage((byte[]) object);
 				if (response.isError()) {
-					//TODO: forward error event (e.g. payer refused the payment!)
-					paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, response.getPayload());
 					nfcTransceiver.disable(activity);
 				}
 				
