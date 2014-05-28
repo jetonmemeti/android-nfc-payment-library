@@ -3,6 +3,12 @@ package ch.uzh.csg.paymentlib;
 import java.security.Signature;
 
 import android.app.Activity;
+import ch.uzh.csg.mbps.customserialization.DecoderFactory;
+import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
+import ch.uzh.csg.mbps.customserialization.PaymentRequest;
+import ch.uzh.csg.mbps.customserialization.PaymentResponse;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.nfclib.NfcEvent;
 import ch.uzh.csg.nfclib.NfcEventHandler;
 import ch.uzh.csg.nfclib.exceptions.NfcNotEnabledException;
@@ -16,12 +22,6 @@ import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.messages.PaymentError;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
-import ch.uzh.csg.paymentlib.payment.DecoderFactory;
-import ch.uzh.csg.paymentlib.payment.InitMessagePayee;
-import ch.uzh.csg.paymentlib.payment.PaymentRequest;
-import ch.uzh.csg.paymentlib.payment.PaymentResponse;
-import ch.uzh.csg.paymentlib.payment.ServerPaymentRequest;
-import ch.uzh.csg.paymentlib.payment.ServerPaymentResponse;
 
 //TODO: javadoc
 public class PaymentRequestInitializer {

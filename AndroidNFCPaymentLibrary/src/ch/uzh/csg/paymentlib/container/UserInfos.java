@@ -3,8 +3,8 @@ package ch.uzh.csg.paymentlib.container;
 import java.security.PrivateKey;
 import java.util.Random;
 
+import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
-import ch.uzh.csg.paymentlib.payment.SignatureAlgorithm;
 
 //TODO: javadoc
 public class UserInfos {

@@ -1,6 +1,6 @@
 package ch.uzh.csg.paymentlib;
 
-import ch.uzh.csg.paymentlib.payment.Currency;
+import ch.uzh.csg.mbps.customserialization.Currency;
 
 //TODO: javadoc
 public interface IUserPromptPaymentRequest {

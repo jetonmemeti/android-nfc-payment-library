@@ -3,6 +3,10 @@ package ch.uzh.csg.paymentlib;
 import java.nio.charset.Charset;
 
 import android.app.Activity;
+import ch.uzh.csg.mbps.customserialization.DecoderFactory;
+import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
+import ch.uzh.csg.mbps.customserialization.PaymentRequest;
+import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.nfclib.CustomHostApduService;
 import ch.uzh.csg.nfclib.IMessageHandler;
 import ch.uzh.csg.nfclib.NfcEvent;
@@ -12,10 +16,6 @@ import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.messages.PaymentError;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
-import ch.uzh.csg.paymentlib.payment.DecoderFactory;
-import ch.uzh.csg.paymentlib.payment.InitMessagePayee;
-import ch.uzh.csg.paymentlib.payment.PaymentRequest;
-import ch.uzh.csg.paymentlib.payment.PaymentResponse;
 
 //TODO: javadoc
 public class PaymentRequestHandler {

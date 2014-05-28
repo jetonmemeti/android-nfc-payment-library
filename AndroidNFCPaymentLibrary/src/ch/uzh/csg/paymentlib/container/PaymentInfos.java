@@ -1,7 +1,7 @@
 package ch.uzh.csg.paymentlib.container;
 
+import ch.uzh.csg.mbps.customserialization.Currency;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
-import ch.uzh.csg.paymentlib.payment.Currency;
 
 //TODO: javadoc
 public class PaymentInfos {
