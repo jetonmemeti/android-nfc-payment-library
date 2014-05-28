@@ -13,6 +13,15 @@
 		<platform.version>4.0.1.2</platform.version>
 		<android.plugin.version>3.7.0</android.plugin.version>
 	</properties>
+	
+	<dependencies>
+	    <!-- Custom Serialization Library -->
+	    <dependency>
+			<groupId>ch.uzh.csg</groupId>
+			<artifactId>custom-serialization</artifactId>
+			<version>0.0.1</version>
+	    </dependency>
+	</dependencies>
 
 	<build>
 		<finalName>${project.artifactId}</finalName>
