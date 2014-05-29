@@ -20,6 +20,7 @@ import ch.uzh.csg.paymentlib.container.PaymentInfos;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
+import ch.uzh.csg.paymentlib.exceptions.UnknownPaymentErrorException;
 import ch.uzh.csg.paymentlib.messages.PaymentError;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
 
@@ -47,6 +48,7 @@ public class PaymentRequestInitializer {
 	private NfcTransceiver nfcTransceiver;
 	private int nofMessages;
 	private boolean aborted;
+	private boolean disabled;
 	
 	public PaymentRequestInitializer(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NoNfcException, NfcNotEnabledException {
 		this(activity, null, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
@@ -69,6 +71,7 @@ public class PaymentRequestInitializer {
 		
 		this.nofMessages = 0;
 		this.aborted = false;
+		this.disabled = false;
 		
 		initPayment(nfcTransceiver);
 	}
@@ -129,8 +132,13 @@ public class PaymentRequestInitializer {
 		
 		@Override
 		public void handleMessage(NfcEvent event, Object object) {
-			if (aborted)
+			if (aborted) {
+				if (!disabled) {
+					nfcTransceiver.disable(activity);
+					disabled = true;
+				}
 				return;
+			}
 			
 			switch (event) {
 			case INIT_FAILED:
@@ -160,13 +168,22 @@ public class PaymentRequestInitializer {
 				
 				if (object == null || !(object instanceof byte[])) {
 					sendError(PaymentError.UNEXPECTED_ERROR);
-					return;
+					break;
 				}
 				
 				PaymentMessage response = new PaymentMessage((byte[]) object);
 				if (response.isError()) {
-					paymentEventHandler.handleMessage(PaymentEvent.ERROR, response.getPayload());
+					PaymentError paymentError = null;
+					if (response.getPayload() != null && response.getPayloadLength() > 0) {
+						try {
+							paymentError = PaymentError.getPaymentError(response.getPayload()[0]);
+						} catch (UnknownPaymentErrorException e) {
+						}
+					}
+					
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, paymentError);
 					nfcTransceiver.disable(activity);
+					break;
 				}
 				
 				//TODO: implement
@@ -175,7 +192,7 @@ public class PaymentRequestInitializer {
 				switch (nofMessages) {
 				case 1:
 					try {
-						PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, response.getData());
+						PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, response.getPayload());
 						PaymentRequest paymentRequestPayee = new PaymentRequest(userInfos.getSignatureAlgorithm(), userInfos.getKeyNumber(), paymentRequestPayer.getUsernamePayer(), userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentRequestPayer.getTimestamp());
 						if (!paymentRequestPayer.requestsIdentic(paymentRequestPayee)) {
 							sendError(PaymentError.REQUESTS_NOT_IDENTIC);

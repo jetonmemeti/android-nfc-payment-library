@@ -130,7 +130,7 @@ public class PaymentRequestHandler {
 				switch (nofMessages) {
 				case 1:
 					try {
-						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.getData());
+						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.getPayload());
 						boolean accepted = userPrompt.handlePaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
 						if (accepted) {
 							//TODO: handle timestamp!!
