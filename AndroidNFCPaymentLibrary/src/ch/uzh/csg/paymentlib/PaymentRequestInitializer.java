@@ -1,7 +1,5 @@
 package ch.uzh.csg.paymentlib;
 
-import java.security.Signature;
-
 import android.app.Activity;
 import ch.uzh.csg.mbps.customserialization.DecoderFactory;
 import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
@@ -207,7 +205,7 @@ public class PaymentRequestInitializer {
 					break;
 				case 2:
 					//TODO: check ACK?
-					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, null);
+					
 					nfcTransceiver.disable(activity);
 					break;
 				}
@@ -225,14 +223,19 @@ public class PaymentRequestInitializer {
 			else
 				paymentResponse = serverPaymentResponse.getPaymentResponsePayer();
 			
-			Signature sig = Signature.getInstance(paymentResponse.getSignatureAlgorithm().getSignatureAlgorithm());
-			sig.initVerify(serverInfos.getPublicKey());
-			sig.update(paymentResponse.getPayload());
-			
-			boolean signatureValid = sig.verify(paymentResponse.getSignature());
+			boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
 			if (!signatureValid) {
 				sendError(PaymentError.UNEXPECTED_ERROR);
 			} else {
+				switch (paymentResponse.getStatus()) {
+				case FAILURE:
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED);
+					break;
+				case SUCCESS:
+					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse);
+					break;
+				}
+				
 				byte[] encode = serverPaymentResponse.getPaymentResponsePayer().encode();
 				nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.DEFAULT, encode).getData());
 			}

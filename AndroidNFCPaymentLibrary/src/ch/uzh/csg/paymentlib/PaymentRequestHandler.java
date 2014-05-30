@@ -147,11 +147,11 @@ public class PaymentRequestHandler {
 				case 2:
 					try {
 						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, message);
-						
 						boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
 						if (!signatureValid) {
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
+							//TODO: handle when server refuses
 							paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, null);
 							return new PaymentMessage(PaymentMessage.DEFAULT, ACK).getData();
 						}
