@@ -1,7 +1,5 @@
 package ch.uzh.csg.paymentlib;
 
-import java.nio.charset.Charset;
-
 import android.app.Activity;
 import ch.uzh.csg.mbps.customserialization.DecoderFactory;
 import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
@@ -20,7 +18,7 @@ import ch.uzh.csg.paymentlib.messages.PaymentMessage;
 //TODO: javadoc
 public class PaymentRequestHandler {
 	
-	public static final byte[] ACK = new String("ACK").getBytes(Charset.forName("UTF-8"));
+	public static final byte[] ACK = new byte[] { (byte) 0xAC };
 	
 	private PaymentEventHandler paymentEventHandler;
 	private UserInfos userInfos;
@@ -33,7 +31,7 @@ public class PaymentRequestHandler {
 	
 	//TODO: store current payment session, in order to be able to detect a resume!
 	
-	private PaymentRequestHandler(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt) throws IllegalArgumentException {
+	public PaymentRequestHandler(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt) throws IllegalArgumentException {
 		checkParameters(activity, paymentEventHandler, userInfos, serverInfos, userPrompt);
 		
 		this.paymentEventHandler = paymentEventHandler;
@@ -47,7 +45,7 @@ public class PaymentRequestHandler {
 		
 		CustomHostApduService.init(activity, nfcEventHandler, messageHandler);
 	}
-
+	
 	private void checkParameters(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt) throws IllegalArgumentException {
 		if (activity == null)
 			throw new IllegalArgumentException("The activity cannot be null.");
@@ -102,7 +100,14 @@ public class PaymentRequestHandler {
 		return new PaymentMessage(PaymentMessage.ERROR, new byte[] { err.getCode() }).getData();
 	}
 	
-	private class MessageHandler implements IMessageHandler {
+	/*
+	 * only for test purposes
+	 */
+	protected MessageHandler getMessageHandler() {
+		return new MessageHandler();
+	}
+	
+	protected class MessageHandler implements IMessageHandler {
 
 		public byte[] handleMessage(byte[] message) {
 			if (aborted)
@@ -151,8 +156,15 @@ public class PaymentRequestHandler {
 						if (!signatureValid) {
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
-							//TODO: handle when server refuses
-							paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, null);
+							switch (paymentResponse.getStatus()) {
+							case FAILURE:
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED);
+								break;
+							case SUCCESS:
+								paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse);
+								break;
+							}
+							
 							return new PaymentMessage(PaymentMessage.DEFAULT, ACK).getData();
 						}
 					} catch (Exception e) {

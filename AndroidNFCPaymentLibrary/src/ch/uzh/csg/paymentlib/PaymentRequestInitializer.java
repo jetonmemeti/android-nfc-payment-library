@@ -162,8 +162,6 @@ public class PaymentRequestInitializer {
 				}
 				break;
 			case MESSAGE_RECEIVED:
-				//TODO: send next message
-				
 				if (object == null || !(object instanceof byte[])) {
 					sendError(PaymentError.UNEXPECTED_ERROR);
 					break;
