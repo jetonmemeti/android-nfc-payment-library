@@ -153,7 +153,6 @@ public class PaymentRequestInitializer {
 				nofMessages++;
 				break;
 			case INITIALIZED:
-				//TODO: store current payment session, in order to be able to detect a resume!
 				try {
 					InitMessagePayee initMessage = new InitMessagePayee(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
 					nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.DEFAULT, initMessage.encode()).getData());
