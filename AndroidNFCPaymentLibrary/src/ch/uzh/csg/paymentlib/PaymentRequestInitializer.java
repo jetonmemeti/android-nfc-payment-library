@@ -140,8 +140,7 @@ public class PaymentRequestInitializer {
 			
 			switch (event) {
 			case INIT_FAILED:
-			case COMMUNICATION_ERROR:
-			case ERROR_REPORTED:
+			case FATAL_ERROR:
 				aborted = true;
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
 				nfcTransceiver.disable(activity);
@@ -247,11 +246,9 @@ public class PaymentRequestInitializer {
 		public void handleMessage(NfcEvent event, Object object) {
 			// TODO Auto-generated method stub
 			switch (event) {
-			case COMMUNICATION_ERROR:
+			case FATAL_ERROR:
 				break;
 			case CONNECTION_LOST:
-				break;
-			case ERROR_REPORTED:
 				break;
 			case INITIALIZED:
 				break;

@@ -72,14 +72,16 @@ public class PaymentRequestHandler {
 			
 			switch (event) {
 			case INIT_FAILED:
-			case COMMUNICATION_ERROR:
-			case ERROR_REPORTED:
+			case FATAL_ERROR:
 				aborted = true;
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
 				break;
 			case CONNECTION_LOST: // do nothing, because new session can be initiated automatically!
 				break;
 			case INITIALIZED: //do nothing
+				
+				//TODO: read out userid to distinguish between new/resume!!
+				
 				break;
 			case MESSAGE_RECEIVED: //do nothing, handle in IMessageHandler
 				break;
