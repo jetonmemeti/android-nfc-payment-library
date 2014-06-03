@@ -80,13 +80,10 @@ public class PaymentRequestHandler {
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
 				break;
 			case CONNECTION_LOST: // do nothing, because new session can be initiated automatically! //TODO: really?
+				//TODO:
+//				nofMessages = 0;
 				break;
 			case INITIALIZED: //do nothing
-				
-				//TODO: read out userid to distinguish between new/resume!! probably not, only used for nfc layer communication!!
-				
-				
-				
 				break;
 			case MESSAGE_RECEIVED: //do nothing, handle in IMessageHandler
 				break;
@@ -151,6 +148,8 @@ public class PaymentRequestHandler {
 							persistedPaymentRequest = new PersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
 						}
 							
+						//TODO: what if user took his device away to click ok/nok? --> abort this crap + avoid exception!!, on next contact jump to return answer!
+						
 						boolean accepted = userPrompt.handlePaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
 						if (accepted) {
 							PaymentRequest pr = new PaymentRequest(userInfos.getSignatureAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
