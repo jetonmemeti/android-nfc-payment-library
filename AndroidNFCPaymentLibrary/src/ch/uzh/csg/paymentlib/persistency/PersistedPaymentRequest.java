@@ -5,7 +5,7 @@ import ch.uzh.csg.mbps.customserialization.exceptions.UnknownCurrencyException;
 
 //TODO: javadoc
 public class PersistedPaymentRequest {
-	private String username;
+	private String username; // username of payee! to detect a double spending problem to the same payee (if server response has not arrived to payer)
 	private byte currencyCode;
 	private long amount;
 	private long timestamp;

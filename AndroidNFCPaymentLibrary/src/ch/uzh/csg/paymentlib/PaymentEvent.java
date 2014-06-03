@@ -5,5 +5,5 @@ public enum PaymentEvent {
 	ERROR,
 	SUCCESS,
 	FORWARD_TO_SERVER,
-	NO_SERVER_RESPONSE; //when no server response received (neither ok nor nok)
+	NO_SERVER_RESPONSE; //when no server response received (neither ok nor nok) --> show on gui!
 }

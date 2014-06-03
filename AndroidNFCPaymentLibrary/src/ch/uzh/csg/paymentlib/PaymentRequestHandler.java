@@ -16,6 +16,7 @@ import ch.uzh.csg.paymentlib.messages.PaymentError;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
 import ch.uzh.csg.paymentlib.persistency.IPersistencyHandler;
 import ch.uzh.csg.paymentlib.persistency.PersistedPaymentRequest;
+import ch.uzh.csg.paymentlib.util.Config;
 
 //TODO: javadoc
 public class PaymentRequestHandler {
@@ -33,7 +34,7 @@ public class PaymentRequestHandler {
 	private boolean aborted = false;
 	
 	public PaymentRequestHandler(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
-		checkParameters(activity, paymentEventHandler, userInfos, serverInfos, userPrompt);
+		checkParameters(activity, paymentEventHandler, userInfos, serverInfos, userPrompt, persistencyHandler);
 		
 		this.paymentEventHandler = paymentEventHandler;
 		this.userInfos = userInfos;
@@ -45,7 +46,7 @@ public class PaymentRequestHandler {
 		CustomHostApduService.init(activity, nfcEventHandler, messageHandler);
 	}
 	
-	private void checkParameters(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt) throws IllegalArgumentException {
+	private void checkParameters(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
 		if (activity == null)
 			throw new IllegalArgumentException("The activity cannot be null.");
 		
@@ -60,6 +61,9 @@ public class PaymentRequestHandler {
 		
 		if (userPrompt == null)
 			throw new IllegalArgumentException("The user prompt cannot be null.");
+		
+		if (persistencyHandler == null)
+			throw new IllegalArgumentException("The persistency handler cannot be null.");
 	}
 	
 	private NfcEventHandler nfcEventHandler = new NfcEventHandler() {
@@ -112,7 +116,9 @@ public class PaymentRequestHandler {
 	
 	protected class MessageHandler implements IMessageHandler {
 		
-		private PersistedPaymentRequest storedPaymentRequest;
+		private PersistedPaymentRequest persistedPaymentRequest;
+		private volatile boolean serverResponseArrived = false;
+
 
 		public byte[] handleMessage(byte[] message) {
 			if (aborted)
@@ -132,32 +138,30 @@ public class PaymentRequestHandler {
 			if (pm.isBuyer()) {
 				//TODO: implement
 				
-				
 			} else {
 				switch (nofMessages) {
 				case 1:
 					try {
 						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.getPayload());
-						long timestamp = System.currentTimeMillis();
 						
-						//TODO: store current payment session, in order to be able to detect a resume!
-						PersistedPaymentRequest xmlPaymentRequest = new PersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), timestamp);
-						if (persistencyHandler.exists(xmlPaymentRequest)) {
-							timestamp = xmlPaymentRequest.getTimestamp();
-						} else {
-							persistencyHandler.add(xmlPaymentRequest);
+						//TODO: how long is a timestamp valid?
+						
+						persistedPaymentRequest = persistencyHandler.getPersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
+						if (persistedPaymentRequest == null) {
+							persistedPaymentRequest = new PersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
 						}
-						
+							
 						boolean accepted = userPrompt.handlePaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
 						if (accepted) {
-							PaymentRequest pr = new PaymentRequest(userInfos.getSignatureAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), timestamp);
+							PaymentRequest pr = new PaymentRequest(userInfos.getSignatureAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
 							pr.sign(userInfos.getPrivateKey());
+							byte[] encoded = pr.encode();
 							
-							//TODO: add thread to detect timeout
-//							Thread t = new Thread();
-//							t.start();
+							Thread t = new Thread(new TimeoutHandlerTask());
+							t.start();
 							
-							return new PaymentMessage(PaymentMessage.DEFAULT, pr.encode()).getData();
+							persistencyHandler.add(persistedPaymentRequest);
+							return new PaymentMessage(PaymentMessage.DEFAULT, encoded).getData();
 						} else {
 							return getError(PaymentError.PAYER_REFUSED);
 						}
@@ -165,11 +169,7 @@ public class PaymentRequestHandler {
 						return getError(PaymentError.UNEXPECTED_ERROR);
 					}
 				case 2:
-					
-					//TODO: add timer if no response arrives --> abort event
-					//TODO: if this message does not arrive, we can't be sure if the payment was accepted or rejected! show on gui!! PaymentEvent.NO_SERVER_RESPONSE!
-					//TODO: if no response arrives, write to xml!
-					
+					serverResponseArrived = true;
 					
 					try {
 						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, message);
@@ -177,7 +177,8 @@ public class PaymentRequestHandler {
 						if (!signatureValid) {
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
-							persistencyHandler.delete(storedPaymentRequest);
+							persistencyHandler.delete(persistedPaymentRequest);
+							
 							switch (paymentResponse.getStatus()) {
 							case FAILURE:
 								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED);
@@ -194,19 +195,30 @@ public class PaymentRequestHandler {
 					}
 				}
 			}
-			
+
+			//TODO: move this up!
 			return getError(PaymentError.UNEXPECTED_ERROR);
 		}
 		
-		
-	}
-	
-	private class TimeoutHandlerTask implements Runnable {
-		
-		public void run() {
-			//TODO: implement
+		private class TimeoutHandlerTask implements Runnable {
 			
-			
+			public void run() {
+				long startTime = System.currentTimeMillis();
+				
+				while (!serverResponseArrived) {
+					long now = System.currentTimeMillis();
+					if (now - startTime > Config.SERVER_RESPONSE_TIMEOUT) {
+						paymentEventHandler.handleMessage(PaymentEvent.NO_SERVER_RESPONSE, null);
+						break;
+					}
+					try {
+						Thread.sleep(50);
+					} catch (InterruptedException e) {
+						break;
+					}
+				}
+			}
 		}
 	}
+	
 }
