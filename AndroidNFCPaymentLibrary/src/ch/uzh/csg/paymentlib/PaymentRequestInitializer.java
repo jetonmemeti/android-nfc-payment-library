@@ -44,9 +44,9 @@ public class PaymentRequestInitializer {
 	private PaymentInfos paymentInfos;
 	
 	private NfcTransceiver nfcTransceiver;
-	private int nofMessages;
-	private boolean aborted;
-	private boolean disabled;
+	private int nofMessages = 0;
+	private boolean aborted = false;
+	private boolean disabled = false;
 	
 	public PaymentRequestInitializer(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NoNfcException, NfcNotEnabledException {
 		this(activity, null, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
@@ -66,10 +66,6 @@ public class PaymentRequestInitializer {
 		this.userInfos = userInfos;
 		this.serverInfos = serverInfos;
 		this.paymentInfos = paymentInfos;
-		
-		this.nofMessages = 0;
-		this.aborted = false;
-		this.disabled = false;
 		
 		initPayment(nfcTransceiver);
 	}
@@ -145,7 +141,7 @@ public class PaymentRequestInitializer {
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
 				nfcTransceiver.disable(activity);
 				break;
-			case CONNECTION_LOST: // do nothing, because new session can be initiated automatically!
+			case CONNECTION_LOST: // do nothing, because new session can be initiated automatically! //TODO: really?
 			case MESSAGE_RETURNED: // do nothing, concerns only the HCE
 				break;
 			case MESSAGE_SENT:
@@ -179,9 +175,6 @@ public class PaymentRequestInitializer {
 					nfcTransceiver.disable(activity);
 					break;
 				}
-				
-				//TODO: implement
-//				pm.isResume();
 				
 				switch (nofMessages) {
 				case 1:

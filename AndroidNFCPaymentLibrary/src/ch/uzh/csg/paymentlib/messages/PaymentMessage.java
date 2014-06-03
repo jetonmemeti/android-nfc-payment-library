@@ -7,7 +7,7 @@ public class PaymentMessage extends ProtocolMessage {
 
 	public static final byte DEFAULT = 0x01;
 	public static final byte ERROR = 0x02; // if not set, then PROCEED
-	public static final byte RESUME = 0x04; // if not set, then START
+	public static final byte RESUME = 0x04; // if not set, then START //TODO: needed??
 	public static final byte BUYER = 0x08; // if not set, then SELLER
 
 	public static final int HEADER_LENGTH = 1;
