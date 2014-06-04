@@ -156,7 +156,7 @@ public class PaymentRequestHandler {
 							pr.sign(userInfos.getPrivateKey());
 							byte[] encoded = pr.encode();
 							
-							Thread t = new Thread(new TimeoutHandlerTask());
+							Thread t = new Thread(new TimeoutHandler());
 							t.start();
 							
 							persistencyHandler.add(persistedPaymentRequest);
@@ -199,7 +199,7 @@ public class PaymentRequestHandler {
 			return getError(PaymentError.UNEXPECTED_ERROR);
 		}
 		
-		private class TimeoutHandlerTask implements Runnable {
+		private class TimeoutHandler implements Runnable {
 			
 			public void run() {
 				long startTime = System.currentTimeMillis();

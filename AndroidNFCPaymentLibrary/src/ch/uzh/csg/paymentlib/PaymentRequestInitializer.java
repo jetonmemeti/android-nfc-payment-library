@@ -21,6 +21,7 @@ import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownPaymentErrorException;
 import ch.uzh.csg.paymentlib.messages.PaymentError;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
+import ch.uzh.csg.paymentlib.util.Config;
 
 //TODO: javadoc
 public class PaymentRequestInitializer {
@@ -47,6 +48,9 @@ public class PaymentRequestInitializer {
 	private int nofMessages = 0;
 	private boolean aborted = false;
 	private boolean disabled = false;
+	
+	private Thread timeoutHandler;
+	private volatile boolean serverResponseArrived = false;
 	
 	public PaymentRequestInitializer(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NoNfcException, NfcNotEnabledException {
 		this(activity, null, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
@@ -187,6 +191,12 @@ public class PaymentRequestInitializer {
 							paymentRequestPayee.sign(userInfos.getPrivateKey());
 							ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
 							paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode());
+							
+							if (timeoutHandler != null && !timeoutHandler.isInterrupted()) {
+								timeoutHandler.interrupt();
+							}
+							timeoutHandler = new Thread(new ServerTimeoutHandler());
+							timeoutHandler.start();
 						}
 					} catch (Exception e) {
 						sendError(PaymentError.UNEXPECTED_ERROR);
@@ -203,7 +213,31 @@ public class PaymentRequestInitializer {
 		}
 	};
 	
+	private class ServerTimeoutHandler implements Runnable {
+
+		public void run() {
+			long startTime = System.currentTimeMillis();
+			
+			while (!serverResponseArrived) {
+				long now = System.currentTimeMillis();
+				if (now - startTime > Config.SERVER_CALL_TIMEOUT) {
+					//TODO: transceiver write abort or smthng!
+					paymentEventHandler.handleMessage(PaymentEvent.NO_SERVER_RESPONSE, null);
+					break;
+				}
+				try {
+					Thread.sleep(50);
+				} catch (InterruptedException e) {
+					break;
+				}
+			}
+		}
+		
+	}
+	
 	public void onServerResponse(byte[] bytes) {
+		serverResponseArrived = true;
+		
 		try {
 			ServerPaymentResponse serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, bytes);
 			PaymentResponse paymentResponse;

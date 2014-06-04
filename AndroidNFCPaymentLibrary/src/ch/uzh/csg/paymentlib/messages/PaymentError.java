@@ -11,6 +11,7 @@ public enum PaymentError {
 	SERVER_REFUSED((byte) 0x02),
 	REQUESTS_NOT_IDENTIC((byte) 0x03),
 	UNEXPECTED_ERROR((byte) 0x04);
+	//TODO: add duplicate request!
 	
 	private byte code;
 	
