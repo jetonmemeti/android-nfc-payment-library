@@ -185,6 +185,9 @@ public class PaymentRequestHandler {
 							case SUCCESS:
 								paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse);
 								break;
+							case DUPLICATE_REQUEST:
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST);
+								break;
 							}
 							
 							return new PaymentMessage(PaymentMessage.DEFAULT, ACK).getData();

@@ -10,8 +10,9 @@ public enum PaymentError {
 	PAYER_REFUSED((byte) 0x01),
 	SERVER_REFUSED((byte) 0x02),
 	REQUESTS_NOT_IDENTIC((byte) 0x03),
-	UNEXPECTED_ERROR((byte) 0x04);
-	//TODO: add duplicate request!
+	DUPLICATE_REQUEST((byte) 0x04),
+	NO_SERVER_RESPONSE((byte) 0x05),
+	UNEXPECTED_ERROR((byte) 0x06);
 	
 	private byte code;
 	

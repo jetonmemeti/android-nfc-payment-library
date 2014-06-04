@@ -38,15 +38,15 @@ public class PaymentRequestInitializer {
 	private PaymentType paymentType;
 	
 	private Activity activity;
-	private PaymentEventHandler paymentEventHandler;
+	private volatile PaymentEventHandler paymentEventHandler;
 	
 	private UserInfos userInfos;
 	private ServerInfos serverInfos;
 	private PaymentInfos paymentInfos;
 	
-	private NfcTransceiver nfcTransceiver;
+	private volatile NfcTransceiver nfcTransceiver;
 	private int nofMessages = 0;
-	private boolean aborted = false;
+	private volatile boolean aborted = false;
 	private boolean disabled = false;
 	
 	private Thread timeoutHandler;
@@ -221,8 +221,10 @@ public class PaymentRequestInitializer {
 			while (!serverResponseArrived) {
 				long now = System.currentTimeMillis();
 				if (now - startTime > Config.SERVER_CALL_TIMEOUT) {
-					//TODO: transceiver write abort or smthng!
+					aborted = true;
 					paymentEventHandler.handleMessage(PaymentEvent.NO_SERVER_RESPONSE, null);
+					PaymentMessage pm = new PaymentMessage(PaymentMessage.ERROR, new byte[] { PaymentError.NO_SERVER_RESPONSE.getCode() });
+					nfcTransceiver.transceive(pm.getData());
 					break;
 				}
 				try {
@@ -256,6 +258,9 @@ public class PaymentRequestInitializer {
 					break;
 				case SUCCESS:
 					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse);
+					break;
+				case DUPLICATE_REQUEST:
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST);
 					break;
 				}
 				
