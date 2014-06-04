@@ -141,7 +141,7 @@ public class PaymentRequestHandler {
 					try {
 						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.getPayload());
 						
-						//TODO: how long is a timestamp valid?
+						//TODO: how long is a timestamp valid? add to PaymentError.TIMESTAMP_INVALID
 						
 						persistedPaymentRequest = persistencyHandler.getPersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
 						if (persistedPaymentRequest == null) {
