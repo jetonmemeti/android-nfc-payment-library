@@ -145,7 +145,9 @@ public class PaymentRequestInitializer {
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
 				nfcTransceiver.disable(activity);
 				break;
-			case CONNECTION_LOST: // do nothing, because new session can be initiated automatically! //TODO: really?
+			case CONNECTION_LOST:
+				nofMessages = 0;
+				break;
 			case MESSAGE_RETURNED: // do nothing, concerns only the HCE
 				break;
 			case MESSAGE_SENT:
@@ -184,7 +186,7 @@ public class PaymentRequestInitializer {
 				case 1:
 					try {
 						PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, response.getPayload());
-						PaymentRequest paymentRequestPayee = new PaymentRequest(userInfos.getSignatureAlgorithm(), userInfos.getKeyNumber(), paymentRequestPayer.getUsernamePayer(), userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentRequestPayer.getTimestamp());
+						PaymentRequest paymentRequestPayee = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), paymentRequestPayer.getUsernamePayer(), userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentRequestPayer.getTimestamp());
 						if (!paymentRequestPayer.requestsIdentic(paymentRequestPayee)) {
 							sendError(PaymentError.REQUESTS_NOT_IDENTIC);
 						} else {

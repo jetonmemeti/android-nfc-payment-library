@@ -79,9 +79,8 @@ public class PaymentRequestHandler {
 				aborted = true;
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
 				break;
-			case CONNECTION_LOST: // do nothing, because new session can be initiated automatically! //TODO: really?
-				//TODO:
-//				nofMessages = 0;
+			case CONNECTION_LOST:
+				nofMessages = 0;
 				break;
 			case INITIALIZED: //do nothing
 				break;
@@ -143,16 +142,34 @@ public class PaymentRequestHandler {
 						
 						//TODO: how long is a timestamp valid? add to PaymentError.TIMESTAMP_INVALID
 						
-						persistedPaymentRequest = persistencyHandler.getPersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
-						if (persistedPaymentRequest == null) {
-							persistedPaymentRequest = new PersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
-						}
-							
-						//TODO: what if user took his device away to click ok/nok? --> abort this crap + avoid exception!!, on next contact jump to return answer!
+						boolean paymentAccepted;
 						
-						boolean accepted = userPrompt.handlePaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
-						if (accepted) {
-							PaymentRequest pr = new PaymentRequest(userInfos.getSignatureAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
+						if (persistedPaymentRequest != null
+								&& persistedPaymentRequest.getUsername().equals(initMessage.getUsername())
+								&& persistedPaymentRequest.getCurrency().getCode() == initMessage.getCurrency().getCode()
+								&& persistedPaymentRequest.getAmount() == initMessage.getAmount()) {
+							// this is a payment resume (the user took his device away to accept/reject the payment
+							
+							paymentAccepted = userPrompt.isPaymentAccepted();
+						} else {
+							// this is a new session
+							persistedPaymentRequest = persistencyHandler.getPersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
+							if (persistedPaymentRequest == null) {
+								// this is a new payment request (not a payment request with a lost server response)
+								persistedPaymentRequest = new PersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
+							}
+							
+							
+							//TODO: on new connection, will the method continue here? other instance will call same method, because MessageHandler is static in CHAS!
+							
+							//TODO: probably implement polling!!
+							
+							
+							paymentAccepted = userPrompt.getPaymentRequestAnswer(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
+						}
+						
+						if (paymentAccepted) {
+							PaymentRequest pr = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
 							pr.sign(userInfos.getPrivateKey());
 							byte[] encoded = pr.encode();
 							
