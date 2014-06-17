@@ -10,8 +10,6 @@ public class PersistedPaymentRequest {
 	private long amount;
 	private long timestamp;
 	
-	//TODO: set limit to timestamp validation (on server, then delete on shared prefs)
-	
 	public PersistedPaymentRequest(String username, Currency currency, long amount, long timestamp) {
 		this.username = username;
 		this.currencyCode = currency.getCode();
