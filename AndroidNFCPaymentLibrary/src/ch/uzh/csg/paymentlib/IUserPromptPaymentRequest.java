@@ -10,7 +10,4 @@ public interface IUserPromptPaymentRequest {
 	//blocking! avoid long calculations
 	public boolean isPaymentAccepted();
 	
-	
-	//TODO: add isResponseReady() for polling!
-	
 }
