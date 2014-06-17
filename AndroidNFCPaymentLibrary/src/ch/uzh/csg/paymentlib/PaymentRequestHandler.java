@@ -97,6 +97,10 @@ public class PaymentRequestHandler {
 		
 	};
 	
+	protected NfcEventHandler getNfcEventHandler() {
+		return nfcEventHandler;
+	}
+	
 	private byte[] getError(PaymentError err) {
 		aborted = true;
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
