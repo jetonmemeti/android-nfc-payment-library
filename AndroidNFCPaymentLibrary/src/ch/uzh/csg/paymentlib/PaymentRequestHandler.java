@@ -144,16 +144,18 @@ public class PaymentRequestHandler {
 					try {
 						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.getPayload());
 						
-						//TODO: how long is a timestamp valid? add to PaymentError.TIMESTAMP_INVALID
-						
 						boolean paymentAccepted;
 						
 						if (persistedPaymentRequest != null
 								&& persistedPaymentRequest.getUsername().equals(initMessage.getUsername())
 								&& persistedPaymentRequest.getCurrency().getCode() == initMessage.getCurrency().getCode()
 								&& persistedPaymentRequest.getAmount() == initMessage.getAmount()) {
-							// this is a payment resume (the user took his device away to accept/reject the payment
-							
+							/*
+							 * this is a retry because the last try was not
+							 * successful (= no server response) or a payment
+							 * resume (the user took his device away to
+							 * accept/reject the payment)
+							 */
 							paymentAccepted = userPrompt.isPaymentAccepted();
 						} else {
 							// this is a new session
@@ -213,7 +215,6 @@ public class PaymentRequestHandler {
 				}
 			}
 
-			//TODO: move this up!
 			return getError(PaymentError.UNEXPECTED_ERROR);
 		}
 		
