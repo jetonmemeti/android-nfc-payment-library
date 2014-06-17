@@ -159,12 +159,6 @@ public class PaymentRequestHandler {
 								persistedPaymentRequest = new PersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
 							}
 							
-							
-							//TODO: on new connection, will the method continue here? other instance will call same method, because MessageHandler is static in CHAS!
-							
-							//TODO: probably implement polling!!
-							
-							
 							paymentAccepted = userPrompt.getPaymentRequestAnswer(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
 						}
 						
