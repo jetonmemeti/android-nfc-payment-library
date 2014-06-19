@@ -102,7 +102,7 @@ public class PaymentRequestHandler {
 	private byte[] getError(PaymentError err) {
 		aborted = true;
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
-		return new PaymentMessage(PaymentMessage.ERROR, new byte[] { err.getCode() }).getData();
+		return new PaymentMessage().type(PaymentMessage.ERROR).bytes(new byte[] { err.getCode() }).bytes();
 	}
 	
 	/*
@@ -123,24 +123,24 @@ public class PaymentRequestHandler {
 				return null;
 			
 			nofMessages++;
-			PaymentMessage pm = new PaymentMessage(message);
+			PaymentMessage pm = new PaymentMessage().bytes(message);
 			if (pm.isError()) {
 				try {
-					PaymentError paymentError = PaymentError.getPaymentError(pm.getPayload()[0]);
+					PaymentError paymentError = PaymentError.getPaymentError(pm.data()[0]);
 					return getError(paymentError);
 				} catch (Exception e) {
 					return getError(PaymentError.UNEXPECTED_ERROR);
 				}
 			}
 			
-			if (pm.isBuyer()) {
+			if (false/*pm.isBuyer()*/) {
 				//TODO: implement
 				
 			} else {
 				switch (nofMessages) {
 				case 1:
 					try {
-						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.getPayload());
+						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.data());
 						
 						//TODO: how long is a timestamp valid? add to PaymentError.TIMESTAMP_INVALID
 						
@@ -171,6 +171,7 @@ public class PaymentRequestHandler {
 						}
 						
 						if (paymentAccepted) {
+							//response 1st message
 							PaymentRequest pr = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
 							pr.sign(userInfos.getPrivateKey());
 							byte[] encoded = pr.encode();
@@ -179,7 +180,7 @@ public class PaymentRequestHandler {
 							t.start();
 							
 							persistencyHandler.add(persistedPaymentRequest);
-							return new PaymentMessage(PaymentMessage.DEFAULT, encoded).getData();
+							return new PaymentMessage().type(PaymentMessage.DEFAULT).data(encoded).bytes();
 						} else {
 							return getError(PaymentError.PAYER_REFUSED);
 						}
@@ -209,9 +210,10 @@ public class PaymentRequestHandler {
 								break;
 							}
 							
-							return new PaymentMessage(PaymentMessage.DEFAULT, ACK).getData();
+							return new PaymentMessage().type(PaymentMessage.DEFAULT).data(ACK).bytes();
 						}
 					} catch (Exception e) {
+						e.printStackTrace();
 						return getError(PaymentError.UNEXPECTED_ERROR);
 					}
 				}

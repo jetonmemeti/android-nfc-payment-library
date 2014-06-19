@@ -119,7 +119,7 @@ public class PaymentRequestInitializer {
 	
 	private void sendError(PaymentError err) {
 		aborted = true;
-		nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.ERROR, new byte[] { err.getCode() }).getData());
+		nfcTransceiver.transceive(new PaymentMessage().type(PaymentMessage.ERROR).data(new byte[] { err.getCode() }).bytes());
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
 	}
 	
@@ -160,7 +160,7 @@ public class PaymentRequestInitializer {
 			case INITIALIZED:
 				try {
 					InitMessagePayee initMessage = new InitMessagePayee(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
-					nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.DEFAULT, initMessage.encode()).getData());
+					nfcTransceiver.transceive(new PaymentMessage().type(PaymentMessage.DEFAULT).data(initMessage.encode()).bytes());
 				} catch (Exception e) {
 					sendError(PaymentError.UNEXPECTED_ERROR);
 				}
@@ -171,12 +171,12 @@ public class PaymentRequestInitializer {
 					break;
 				}
 				
-				PaymentMessage response = new PaymentMessage((byte[]) object);
+				PaymentMessage response = new PaymentMessage().bytes((byte[]) object);
 				if (response.isError()) {
 					PaymentError paymentError = null;
-					if (response.getPayload() != null && response.getPayloadLength() > 0) {
+					if (response.data() != null && response.data().length > 0) {
 						try {
-							paymentError = PaymentError.getPaymentError(response.getPayload()[0]);
+							paymentError = PaymentError.getPaymentError(response.data()[0]);
 						} catch (UnknownPaymentErrorException e) {
 						}
 					}
@@ -189,7 +189,7 @@ public class PaymentRequestInitializer {
 				switch (nofMessages) {
 				case 1:
 					try {
-						PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, response.getPayload());
+						PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, response.data());
 						PaymentRequest paymentRequestPayee = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), paymentRequestPayer.getUsernamePayer(), userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentRequestPayer.getTimestamp());
 						if (!paymentRequestPayer.requestsIdentic(paymentRequestPayee)) {
 							sendError(PaymentError.REQUESTS_NOT_IDENTIC);
@@ -229,8 +229,8 @@ public class PaymentRequestInitializer {
 				if (now - startTime > Config.SERVER_CALL_TIMEOUT) {
 					aborted = true;
 					paymentEventHandler.handleMessage(PaymentEvent.NO_SERVER_RESPONSE, null);
-					PaymentMessage pm = new PaymentMessage(PaymentMessage.ERROR, new byte[] { PaymentError.NO_SERVER_RESPONSE.getCode() });
-					nfcTransceiver.transceive(pm.getData());
+					PaymentMessage pm = new PaymentMessage().type(PaymentMessage.ERROR).data(new byte[] { PaymentError.NO_SERVER_RESPONSE.getCode() });
+					nfcTransceiver.transceive(pm.bytes());
 					break;
 				}
 				try {
@@ -271,7 +271,7 @@ public class PaymentRequestInitializer {
 				}
 				
 				byte[] encode = serverPaymentResponse.getPaymentResponsePayer().encode();
-				nfcTransceiver.transceive(new PaymentMessage(PaymentMessage.DEFAULT, encode).getData());
+				nfcTransceiver.transceive(new PaymentMessage().type(PaymentMessage.DEFAULT).bytes(encode).bytes());
 			}
 		} catch (Exception e) {
 			sendError(PaymentError.UNEXPECTED_ERROR);

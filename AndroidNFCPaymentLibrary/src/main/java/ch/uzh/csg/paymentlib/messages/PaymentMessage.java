@@ -1,80 +1,111 @@
 package ch.uzh.csg.paymentlib.messages;
 
-import ch.uzh.csg.nfclib.messages.ProtocolMessage;
 
 //TODO: javadoc
-public class PaymentMessage extends ProtocolMessage {
-
-	public static final byte DEFAULT = 0x01;
-	public static final byte ERROR = 0x02; // if not set, then PROCEED
-	public static final byte RESUME = 0x04; // if not set, then START //TODO: needed??
-	public static final byte BUYER = 0x08; // if not set, then SELLER
+public class PaymentMessage {
 
 	public static final int HEADER_LENGTH = 1;
-	
-	public PaymentMessage(byte[] data) {
-		setHeaderLength(HEADER_LENGTH);
-		setData(data);
-	}
-	
-	/**
-	 * Creates a new PaymentMessage
-	 * 
-	 * @param status
-	 *            the status to e contained in the header
-	 * @param payload
-	 *            the payload of this message
-	 */
-	public PaymentMessage(byte status, byte[] payload) {
-		byte[] data;
-		if (payload != null && payload.length > 0) {
-			data = new byte[payload.length+HEADER_LENGTH];
-			System.arraycopy(payload, 0, data, HEADER_LENGTH, payload.length);
-		} else {
-			data = new byte[HEADER_LENGTH];
+
+	// type, uses 3 bits
+	public static final byte EMPTY = 0x00;
+	public static final byte DEFAULT = 0x01;
+	public static final byte RESUME = 0x02; // if not set, then START //TODO:
+	                                        // needed??
+	public static final byte START = 0x03;
+	public static final byte BUYER = 0x04; // if not set, then SELLER
+	public static final byte SELLER = 0x05; // if not set, then SELLER
+	public static final byte UNUSED_1 = 0x06;
+	public static final byte UNUSED_2 = 0x07;
+
+	// flags
+	public static final byte UNUSED_FLAG_1 = 0x08;
+	public static final byte UNUSED_FLAG_2 = 0x10;
+	public static final byte UNUSED_FLAG_3 = 0x20;
+	public static final byte UNUSED_FLAG_4 = 0x40;
+	public static final byte ERROR = (byte) 0x80; // if not set, then PROCEED
+
+	// data
+	private byte[] data = new byte[0];
+	private int header;
+
+	public PaymentMessage type(byte messageType) {
+		if (messageType > UNUSED_2) {
+			throw new IllegalArgumentException("largest message type is " + UNUSED_2);
 		}
-		
-		data[0] = status;
-		
-		setHeaderLength(HEADER_LENGTH);
-		setData(data);
+		// preserve only the flags
+		header = header & 0xF8;
+		header = header | messageType;
+		return this;
 	}
 
-	/**
-	 * Returns true if an error has been encountered and the protocol should be
-	 * aborted.
-	 */
+	public int type() {
+		// return the last 3 bits
+		return header & 0x7;
+	}
+
+	public PaymentMessage data(byte[] data) {
+		if (data == null) {
+			throw new IllegalArgumentException("data cannot be null");
+		}
+		this.data = data;
+		return this;
+	}
+
+	public byte[] data() {
+		return data;
+	}
+
 	public boolean isError() {
-		return (getStatus() & ERROR) == ERROR;
+		return (header & ERROR) > 0;
 	}
 
-	/**
-	 * Returns true if this PaymentMessage belongs to an ongoing communication.
-	 * It returns false if a new communication is started.
-	 */
-	public boolean isResume() {
-		return (getStatus() & RESUME) == RESUME;
+	public PaymentMessage error(boolean error) {
+		if (error) {
+			header = header | ERROR;
+		} else {
+			header = header & ~ERROR;
+		}
+		return this;
 	}
-	
-	/**
-	 * Returns true if the buyer initiated the protocol.
-	 */
-	public boolean isBuyer() {
-		return (getStatus() & BUYER) == BUYER;
+
+	public PaymentMessage error() {
+		error(true);
+		return this;
 	}
-	
+
+	// serialization
+	public byte[] bytes() {
+		final int len = data.length;
+		byte[] output = new byte[HEADER_LENGTH + len];
+		output[0] = (byte) header;
+		System.arraycopy(data, 0, output, HEADER_LENGTH, len);
+		return output;
+	}
+
+	public boolean isEmpty() {
+		return header == 0 && data.length == 0;
+	}
+
+	public PaymentMessage bytes(byte[] input) {
+		final int len = input.length;
+		if (!isEmpty() || input == null || len < HEADER_LENGTH) {
+			throw new IllegalArgumentException("Message is empty, no input, or not enough data");
+		}
+
+		// this is now a custom message
+		header = input[0];
+		if (len > HEADER_LENGTH) {
+			data = new byte[len - HEADER_LENGTH];
+			System.arraycopy(input, HEADER_LENGTH, data, 0, len - HEADER_LENGTH);
+		}
+		return this;
+	}
+
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder("PaymentMessage: ");
-		if (getData() == null || getData().length < 1) {
-			sb.append("corrupt message!");
-			return sb.toString();
-		} else {
-			sb.append("head: ");
-			sb.append(", status: ").append(Integer.toHexString(getData()[0] & 0xFF));
-			sb.append("/ payload length:").append(getData().length-HEADER_LENGTH);
-			return sb.toString();
-		}
+		StringBuilder sb = new StringBuilder("PxMsg: ");
+		sb.append("head: ").append(Integer.toHexString(header));
+		sb.append(",len:").append(data.length);
+		return sb.toString();
 	}
-	
 }
