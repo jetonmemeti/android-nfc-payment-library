@@ -1,6 +1,7 @@
 package ch.uzh.csg.paymentlib;
 
 import android.app.Activity;
+import android.util.Log;
 import ch.uzh.csg.mbps.customserialization.DecoderFactory;
 import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
@@ -8,7 +9,7 @@ import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.nfclib.NfcEvent;
-import ch.uzh.csg.nfclib.NfcEventHandler;
+import ch.uzh.csg.nfclib.NfcEventInterface;
 import ch.uzh.csg.nfclib.exceptions.NfcNotEnabledException;
 import ch.uzh.csg.nfclib.exceptions.NoNfcException;
 import ch.uzh.csg.nfclib.transceiver.ExternalNfcTransceiver;
@@ -26,6 +27,8 @@ import ch.uzh.csg.paymentlib.util.Config;
 //TODO: javadoc
 public class PaymentRequestInitializer {
 	
+	public static final String TAG = "##NFC## PaymentRequestInitializer";
+	
 	/*
 	 * seller/payee inits the payment --> type: request_payment
 	 * buyer/payer inits the payment --> type : send_payment
@@ -38,7 +41,7 @@ public class PaymentRequestInitializer {
 	private PaymentType paymentType;
 	
 	private Activity activity;
-	private volatile PaymentEventHandler paymentEventHandler;
+	private volatile PaymentEventInterface paymentEventHandler;
 	
 	private UserInfos userInfos;
 	private ServerInfos serverInfos;
@@ -52,7 +55,7 @@ public class PaymentRequestInitializer {
 	private Thread timeoutHandler;
 	private volatile boolean serverResponseArrived = false;
 	
-	public PaymentRequestInitializer(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NoNfcException, NfcNotEnabledException {
+	public PaymentRequestInitializer(Activity activity, PaymentEventInterface paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NoNfcException, NfcNotEnabledException {
 		this(activity, null, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
 	}
 	
@@ -61,7 +64,7 @@ public class PaymentRequestInitializer {
 	 * NfcTransceiver. For productive use the public constructor, otherwise the
 	 * NFC will not work.
 	 */
-	protected PaymentRequestInitializer(Activity activity, NfcTransceiver nfcTransceiver, PaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NoNfcException, NfcNotEnabledException {
+	protected PaymentRequestInitializer(Activity activity, NfcTransceiver nfcTransceiver, PaymentEventInterface paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NoNfcException, NfcNotEnabledException {
 		checkParameters(activity, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
 		
 		this.paymentType = type;
@@ -74,7 +77,7 @@ public class PaymentRequestInitializer {
 		initPayment(nfcTransceiver);
 	}
 
-	private void checkParameters(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException {
+	private void checkParameters(Activity activity, PaymentEventInterface paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException {
 		if (activity == null)
 			throw new IllegalArgumentException("The activity cannot be null.");
 		
@@ -95,7 +98,7 @@ public class PaymentRequestInitializer {
 	}
 	
 	private void initPayment(NfcTransceiver nfcTransceiver) throws NoNfcException, NfcNotEnabledException {
-		NfcEventHandler nfcEventHandler;
+		NfcEventInterface nfcEventHandler;
 		if (this.paymentType == PaymentType.REQUEST_PAYMENT)
 			nfcEventHandler = nfcEventHandlerRequest;
 		else
@@ -109,6 +112,7 @@ public class PaymentRequestInitializer {
 			else
 				this.nfcTransceiver = new InternalNfcTransceiver(nfcEventHandler, userInfos.getUserId());
 			
+			Log.d(TAG, "init and enable transceiver");
 			this.nfcTransceiver.enable(activity);
 		}
 	}
@@ -122,11 +126,11 @@ public class PaymentRequestInitializer {
 	/*
 	 * only for test purposes
 	 */
-	protected NfcEventHandler getNfcEventHandlerRequest() {
+	protected NfcEventInterface getNfcEventHandlerRequest() {
 		return nfcEventHandlerRequest;
 	}
 	
-	private NfcEventHandler nfcEventHandlerRequest = new NfcEventHandler() {
+	private NfcEventInterface nfcEventHandlerRequest = new NfcEventInterface() {
 		
 		@Override
 		public void handleMessage(NfcEvent event, Object object) {
@@ -274,7 +278,7 @@ public class PaymentRequestInitializer {
 		}
 	}
 
-	private NfcEventHandler nfcEventHandlerSend = new NfcEventHandler() {
+	private NfcEventInterface nfcEventHandlerSend = new NfcEventInterface() {
 		
 		@Override
 		public void handleMessage(NfcEvent event, Object object) {

@@ -6,9 +6,10 @@ import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.nfclib.CustomHostApduService;
+import ch.uzh.csg.nfclib.CustomHostApduService2;
 import ch.uzh.csg.nfclib.IMessageHandler;
 import ch.uzh.csg.nfclib.NfcEvent;
-import ch.uzh.csg.nfclib.NfcEventHandler;
+import ch.uzh.csg.nfclib.NfcEventInterface;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
@@ -23,7 +24,7 @@ public class PaymentRequestHandler {
 	
 	public static final byte[] ACK = new byte[] { (byte) 0xAC };
 	
-	private PaymentEventHandler paymentEventHandler;
+	private PaymentEventInterface paymentEventHandler;
 	private UserInfos userInfos;
 	private ServerInfos serverInfos;
 	private IUserPromptPaymentRequest userPrompt;
@@ -33,7 +34,7 @@ public class PaymentRequestHandler {
 	private int nofMessages = 0;
 	private boolean aborted = false;
 	
-	public PaymentRequestHandler(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
+	public PaymentRequestHandler(Activity activity, PaymentEventInterface paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
 		checkParameters(activity, paymentEventHandler, userInfos, serverInfos, userPrompt, persistencyHandler);
 		
 		this.paymentEventHandler = paymentEventHandler;
@@ -43,10 +44,11 @@ public class PaymentRequestHandler {
 		this.persistencyHandler = persistencyHandler;
 		this.messageHandler = new MessageHandler();
 		
-		CustomHostApduService.init(activity, nfcEventHandler, messageHandler);
+		CustomHostApduService c = new CustomHostApduService(activity, nfcEventHandler, messageHandler);
+		CustomHostApduService2.init(c);
 	}
 	
-	private void checkParameters(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
+	private void checkParameters(Activity activity, PaymentEventInterface paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
 		if (activity == null)
 			throw new IllegalArgumentException("The activity cannot be null.");
 		
@@ -66,7 +68,7 @@ public class PaymentRequestHandler {
 			throw new IllegalArgumentException("The persistency handler cannot be null.");
 	}
 	
-	private NfcEventHandler nfcEventHandler = new NfcEventHandler() {
+	private NfcEventInterface nfcEventHandler = new NfcEventInterface() {
 		
 		@Override
 		public void handleMessage(NfcEvent event, Object object) {
