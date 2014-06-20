@@ -215,7 +215,8 @@ public class PaymentRequestInitializer {
 					}
 					break;
 				case 2:
-					//TODO: check ACK?
+					if (timeoutHandler != null && !timeoutHandler.isInterrupted())
+						 timeoutHandler.interrupt();
 					
 					nfcTransceiver.disable(activity);
 					break;
