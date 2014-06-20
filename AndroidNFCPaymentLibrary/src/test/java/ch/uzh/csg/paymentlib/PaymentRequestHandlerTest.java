@@ -85,7 +85,7 @@ public class PaymentRequestHandlerTest {
 		});
 	}
 	
-	private PaymentEventInterface paymentEventHandler = new PaymentEventInterface() {
+	private IPaymentEventHandler paymentEventHandler = new IPaymentEventHandler() {
 		
 		@Override
 		public void handleMessage(PaymentEvent event, Object object) {

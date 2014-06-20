@@ -29,7 +29,7 @@ public class PaymentRequestHandler {
 	
 	public static final byte[] ACK = new byte[] { (byte) 0xAC };
 	
-	private PaymentEventInterface paymentEventHandler;
+	private IPaymentEventHandler paymentEventHandler;
 	private UserInfos userInfos;
 	private ServerInfos serverInfos;
 	private IUserPromptPaymentRequest userPrompt;
@@ -39,7 +39,7 @@ public class PaymentRequestHandler {
 	private int nofMessages = 0;
 	private boolean aborted = false;
 	
-	public PaymentRequestHandler(Activity activity, PaymentEventInterface paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
+	public PaymentRequestHandler(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
 		checkParameters(activity, paymentEventHandler, userInfos, serverInfos, userPrompt, persistencyHandler);
 		
 		this.paymentEventHandler = paymentEventHandler;
@@ -53,7 +53,7 @@ public class PaymentRequestHandler {
 		CustomHostApduService2.init(c);
 	}
 	
-	private void checkParameters(Activity activity, PaymentEventInterface paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
+	private void checkParameters(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
 		if (activity == null)
 			throw new IllegalArgumentException("The activity cannot be null.");
 		

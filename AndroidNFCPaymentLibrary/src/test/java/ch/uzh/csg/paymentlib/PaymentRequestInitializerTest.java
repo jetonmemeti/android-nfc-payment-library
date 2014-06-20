@@ -86,7 +86,7 @@ public class PaymentRequestInitializerTest {
 		serverTimeout = false;
 	}
 	
-	private PaymentEventInterface paymentEventHandler = new PaymentEventInterface() {
+	private IPaymentEventHandler paymentEventHandler = new IPaymentEventHandler() {
 		
 		@Override
 		public void handleMessage(PaymentEvent event, Object object) {

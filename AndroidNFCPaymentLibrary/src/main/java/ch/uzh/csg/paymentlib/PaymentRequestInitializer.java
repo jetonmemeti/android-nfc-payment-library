@@ -42,7 +42,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	private PaymentType paymentType;
 	
 	private Activity activity;
-	private volatile PaymentEventInterface paymentEventHandler;
+	private volatile IPaymentEventHandler paymentEventHandler;
 	
 	private UserInfos userInfos;
 	private ServerInfos serverInfos;
@@ -56,7 +56,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	private Thread timeoutHandler;
 	private volatile boolean serverResponseArrived = false;
 	
-	public PaymentRequestInitializer(Activity activity, PaymentEventInterface paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException,  NfcLibException {
+	public PaymentRequestInitializer(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException,  NfcLibException {
 		this(activity, null, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
 	}
 	
@@ -65,7 +65,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	 * NfcTransceiver. For productive use the public constructor, otherwise the
 	 * NFC will not work.
 	 */
-	protected PaymentRequestInitializer(Activity activity, NfcTransceiver nfcTransceiver, PaymentEventInterface paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NfcLibException {
+	protected PaymentRequestInitializer(Activity activity, NfcTransceiver nfcTransceiver, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NfcLibException {
 		checkParameters(activity, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
 		
 		this.paymentType = type;
@@ -78,7 +78,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		initPayment(nfcTransceiver);
 	}
 
-	private void checkParameters(Activity activity, PaymentEventInterface paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException {
+	private void checkParameters(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException {
 		if (activity == null)
 			throw new IllegalArgumentException("The activity cannot be null.");
 		
