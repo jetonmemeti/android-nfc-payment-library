@@ -1,6 +1,5 @@
 package ch.uzh.csg.paymentlib.messages;
 
-import android.util.Log;
 
 
 //TODO: javadoc
@@ -27,7 +26,7 @@ public class PaymentMessage {
 	public static final byte ERROR = (byte) 0x80; // if not set, then PROCEED
 
 	// data
-	private byte[] data = new byte[0];
+	private byte[] payload = new byte[0];
 	private int header;
 
 	public PaymentMessage type(byte messageType) {
@@ -45,16 +44,16 @@ public class PaymentMessage {
 		return header & 0x7;
 	}
 
-	public PaymentMessage data(byte[] data) {
-		if (data == null) {
+	public PaymentMessage payload(byte[] payload) {
+		if (payload == null) {
 			throw new IllegalArgumentException("data cannot be null");
 		}
-		this.data = data;
+		this.payload = payload;
 		return this;
 	}
 
-	public byte[] data() {
-		return data;
+	public byte[] payload() {
+		return payload;
 	}
 
 	public boolean isError() {
@@ -77,15 +76,15 @@ public class PaymentMessage {
 
 	// serialization
 	public byte[] bytes() {
-		final int len = data.length;
+		final int len = payload.length;
 		byte[] output = new byte[HEADER_LENGTH + len];
 		output[0] = (byte) header;
-		System.arraycopy(data, 0, output, HEADER_LENGTH, len);
+		System.arraycopy(payload, 0, output, HEADER_LENGTH, len);
 		return output;
 	}
 
 	public boolean isEmpty() {
-		return header == 0 && data.length == 0;
+		return header == 0 && payload.length == 0;
 	}
 
 	public PaymentMessage bytes(byte[] input) {
@@ -97,8 +96,8 @@ public class PaymentMessage {
 		// this is now a custom message
 		header = input[0];
 		if (len > HEADER_LENGTH) {
-			data = new byte[len - HEADER_LENGTH];
-			System.arraycopy(input, HEADER_LENGTH, data, 0, len - HEADER_LENGTH);
+			payload = new byte[len - HEADER_LENGTH];
+			System.arraycopy(input, HEADER_LENGTH, payload, 0, len - HEADER_LENGTH);
 		}
 		return this;
 	}
@@ -107,7 +106,7 @@ public class PaymentMessage {
 	public String toString() {
 		StringBuilder sb = new StringBuilder("PxMsg: ");
 		sb.append("head: ").append(Integer.toHexString(header));
-		sb.append(",len:").append(data.length);
+		sb.append(",len:").append(payload.length);
 		return sb.toString();
 	}
 }

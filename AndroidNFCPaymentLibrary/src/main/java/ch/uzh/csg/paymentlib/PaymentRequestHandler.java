@@ -107,7 +107,7 @@ public class PaymentRequestHandler {
 	private byte[] getError(PaymentError err) {
 		aborted = true;
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
-		return new PaymentMessage().type(PaymentMessage.ERROR).data(new byte[] { err.getCode() }).bytes();
+		return new PaymentMessage().type(PaymentMessage.ERROR).payload(new byte[] { err.getCode() }).bytes();
 	}
 	
 	/*
@@ -139,9 +139,10 @@ public class PaymentRequestHandler {
 			PaymentMessage pm = new PaymentMessage().bytes(message);
 			if (pm.isError()) {
 				try {
-					PaymentError paymentError = PaymentError.getPaymentError(pm.data()[0]);
+					PaymentError paymentError = PaymentError.getPaymentError(pm.payload()[0]);
 					return getError(paymentError);
 				} catch (Exception e) {
+					Log.d(TAG, "exception", e);
 					return getError(PaymentError.UNEXPECTED_ERROR);
 				}
 			}
@@ -154,7 +155,7 @@ public class PaymentRequestHandler {
 				switch (nofMessages) {
 				case 1:
 					try {
-						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.data());
+						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
 						
 						boolean paymentAccepted;
 						
@@ -190,20 +191,23 @@ public class PaymentRequestHandler {
 							t.start();
 							
 							persistencyHandler.add(persistedPaymentRequest);
-							return new PaymentMessage().type(PaymentMessage.DEFAULT).data(encoded).bytes();
+							return new PaymentMessage().type(PaymentMessage.DEFAULT).payload(encoded).bytes();
 						} else {
 							return getError(PaymentError.PAYER_REFUSED);
 						}
 					} catch (Exception e) {
+						Log.d(TAG, "exception", e);
 						return getError(PaymentError.UNEXPECTED_ERROR);
 					}
 				case 2:
 					serverResponseArrived = true;
 					
 					try {
-						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, message);
+						Log.d(TAG, "DBG1: "+Arrays.toString(pm.payload()));
+						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 						boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
 						if (!signatureValid) {
+							Log.d(TAG, "exception sig not valid " + serverInfos.getPublicKey());
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
 							persistencyHandler.delete(persistedPaymentRequest);
@@ -220,15 +224,15 @@ public class PaymentRequestHandler {
 								break;
 							}
 							
-							return new PaymentMessage().type(PaymentMessage.DEFAULT).data(ACK).bytes();
+							return new PaymentMessage().type(PaymentMessage.DEFAULT).payload(ACK).bytes();
 						}
 					} catch (Exception e) {
-						e.printStackTrace();
+						Log.d(TAG, "exception", e);
 						return getError(PaymentError.UNEXPECTED_ERROR);
 					}
 				}
 			}
-
+			Log.d(TAG, "exception generic");
 			return getError(PaymentError.UNEXPECTED_ERROR);
 		}
 		
