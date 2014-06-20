@@ -26,7 +26,7 @@ import ch.uzh.csg.paymentlib.messages.PaymentMessage;
 import ch.uzh.csg.paymentlib.util.Config;
 
 //TODO: javadoc
-public class PaymentRequestInitializer {
+public class PaymentRequestInitializer implements IServerResponseListener {
 	
 	public static final String TAG = "##NFC## PaymentRequestInitializer";
 	
@@ -202,7 +202,7 @@ public class PaymentRequestInitializer {
 						} else {
 							paymentRequestPayee.sign(userInfos.getPrivateKey());
 							ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
-							paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode());
+							paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
 							
 							if (timeoutHandler != null && !timeoutHandler.isInterrupted()) {
 								timeoutHandler.interrupt();
@@ -250,11 +250,11 @@ public class PaymentRequestInitializer {
 		
 	}
 	
-	public void onServerResponse(byte[] bytes) {
+	@Override
+	public void onServerResponse(ServerPaymentResponse serverPaymentResponse) {
 		serverResponseArrived = true;
 		
 		try {
-			ServerPaymentResponse serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, bytes);
 			PaymentResponse paymentResponse;
 			if (serverPaymentResponse.getPaymentResponsePayee() != null)
 				paymentResponse = serverPaymentResponse.getPaymentResponsePayee();
@@ -310,5 +310,5 @@ public class PaymentRequestInitializer {
 			}
 		}
 	};
-	
+
 }
