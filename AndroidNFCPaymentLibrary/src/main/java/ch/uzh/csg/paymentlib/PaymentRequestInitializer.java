@@ -166,7 +166,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case INITIALIZED:
 				try {
 					InitMessagePayee initMessage = new InitMessagePayee(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
-					nfcTransceiver.transceive(new PaymentMessage().payload(initMessage.encode()).bytes());
+					nfcTransceiver.transceive(new PaymentMessage().payee().payload(initMessage.encode()).bytes());
 				} catch (Exception e) {
 					sendError(PaymentError.UNEXPECTED_ERROR);
 				}
@@ -284,7 +284,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				byte[] encode = serverPaymentResponse.getPaymentResponsePayer().encode();
 				
 				Log.d(TAG, "DBG2: "+Arrays.toString(encode)+ "//"+serverInfos.getPublicKey());
-				nfcTransceiver.transceive(new PaymentMessage().payload(encode).bytes());
+				nfcTransceiver.transceive(new PaymentMessage().payee().payload(encode).bytes());
 			}
 		} catch (Exception e) {
 			Log.e(TAG, "exception", e);
