@@ -12,7 +12,6 @@ import ch.uzh.csg.nfclib.CustomHostApduService;
 import ch.uzh.csg.nfclib.CustomHostApduService2;
 import ch.uzh.csg.nfclib.IMessageHandler;
 import ch.uzh.csg.nfclib.NfcEvent;
-import ch.uzh.csg.nfclib.NfcEventInterface;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
@@ -73,10 +72,10 @@ public class PaymentRequestHandler {
 			throw new IllegalArgumentException("The persistency handler cannot be null.");
 	}
 	
-	private NfcEventInterface nfcEventHandler = new NfcEventInterface() {
+	private NfcEvent nfcEventHandler = new NfcEvent() {
 		
 		@Override
-		public void handleMessage(NfcEvent event, Object object) {
+		public void handleMessage(Type event, Object object) {
 			if (aborted)
 				return;
 			
@@ -120,7 +119,7 @@ public class PaymentRequestHandler {
 	/*
 	 * only for test purposes
 	 */
-	protected NfcEventInterface getNfcEventHandler() {
+	protected NfcEvent getNfcEventHandler() {
 		return nfcEventHandler;
 	}
 	

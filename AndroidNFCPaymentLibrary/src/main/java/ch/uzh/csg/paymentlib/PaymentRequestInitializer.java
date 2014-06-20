@@ -11,11 +11,8 @@ import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.nfclib.NfcEvent;
-import ch.uzh.csg.nfclib.NfcEventInterface;
-import ch.uzh.csg.nfclib.transceiver.ExternalNfcTransceiver;
-import ch.uzh.csg.nfclib.transceiver.InternalNfcTransceiver;
-import ch.uzh.csg.nfclib.transceiver.NfcLibException;
-import ch.uzh.csg.nfclib.transceiver.NfcTransceiver;
+import ch.uzh.csg.nfclib.NfcLibException;
+import ch.uzh.csg.nfclib.NfcTransceiver;
 import ch.uzh.csg.paymentlib.container.PaymentInfos;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
@@ -99,7 +96,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	}
 	
 	private void initPayment(NfcTransceiver nfcTransceiver) throws NfcLibException {
-		NfcEventInterface nfcEventHandler;
+		NfcEvent nfcEventHandler;
 		if (this.paymentType == PaymentType.REQUEST_PAYMENT)
 			nfcEventHandler = nfcEventHandlerRequest;
 		else
@@ -108,10 +105,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		if (nfcTransceiver != null) {
 			this.nfcTransceiver = nfcTransceiver;
 		} else {
-			if (ExternalNfcTransceiver.isExternalReaderAttached(activity))
-				this.nfcTransceiver = new ExternalNfcTransceiver(nfcEventHandler, userInfos.getUserId());
-			else
-				this.nfcTransceiver = new InternalNfcTransceiver(nfcEventHandler, userInfos.getUserId());
+			this.nfcTransceiver = new NfcTransceiver(nfcEventHandler, activity, userInfos.getUserId());
+			
+			
 			
 			Log.d(TAG, "init and enable transceiver");
 			this.nfcTransceiver.enable(activity);
@@ -127,14 +123,14 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	/*
 	 * only for test purposes
 	 */
-	protected NfcEventInterface getNfcEventHandlerRequest() {
+	protected NfcEvent getNfcEventHandlerRequest() {
 		return nfcEventHandlerRequest;
 	}
 	
-	private NfcEventInterface nfcEventHandlerRequest = new NfcEventInterface() {
+	private NfcEvent nfcEventHandlerRequest = new NfcEvent() {
 		
 		@Override
-		public void handleMessage(NfcEvent event, Object object) {
+		public void handleMessage(Type event, Object object) {
 			if(object instanceof byte[]) {
 				Log.d(TAG, "handle payment request init message: "+event.name()+ " / " + Arrays.toString((byte[]) object));
 			} else {
@@ -292,10 +288,10 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		}
 	}
 
-	private NfcEventInterface nfcEventHandlerSend = new NfcEventInterface() {
+	private NfcEvent nfcEventHandlerSend = new NfcEvent() {
 		
 		@Override
-		public void handleMessage(NfcEvent event, Object object) {
+		public void handleMessage(Type event, Object object) {
 			// TODO Auto-generated method stub
 			switch (event) {
 			case FATAL_ERROR:
