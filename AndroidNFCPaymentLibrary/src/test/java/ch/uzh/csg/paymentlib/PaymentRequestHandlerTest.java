@@ -531,4 +531,113 @@ public class PaymentRequestHandlerTest {
 		}
 	};
 	
+	public void testPaymentRequestHandler_PayeeRemovesDevice() throws Exception {
+		/*
+		 * Simulates a payment where the payer removes the device to click on
+		 * the accept button and re-establishes a nfc contact
+		 */
+		reset();
+
+		KeyPair keyPairPayee = TestUtils.generateKeyPair();
+		UserInfos userInfosPayee = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
+
+		KeyPair keyPairPayer = TestUtils.generateKeyPair();
+		KeyPair keyPairServer = TestUtils.generateKeyPair();
+		UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
+		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
+
+		IUserPromptPaymentRequest userPrompt = new IUserPromptPaymentRequest() {
+			@Override
+			public boolean getPaymentRequestAnswer(String username, Currency currency, long amount) {
+				// accept the payment
+				return true;
+			}
+
+			@Override
+			public boolean isPaymentAccepted() {
+				// accept the payment
+				return true;
+			}
+		};
+
+		PersistencyHandler iph = new PersistencyHandler();
+
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, userPrompt, iph);
+		MessageHandler messageHandler = prh.getMessageHandler();
+
+		// receive payment request
+		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
+		byte[] data = new PaymentMessage(PaymentMessage.DEFAULT, initMessage.encode()).getData();
+
+		byte[] handleMessage = messageHandler.handleMessage(data);
+
+		PaymentMessage pm = new PaymentMessage((byte[]) handleMessage);
+		assertEquals(PaymentMessage.DEFAULT, pm.getStatus());
+		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.getPayload());
+
+		assertEquals(userInfosPayer.getUsername(), paymentRequestPayer.getUsernamePayer());
+		assertEquals(userInfosPayee.getUsername(), paymentRequestPayer.getUsernamePayee());
+		assertEquals(paymentInfos.getCurrency().getCode(), paymentRequestPayer.getCurrency().getCode());
+		assertEquals(paymentInfos.getAmount(), paymentRequestPayer.getAmount());
+
+		assertEquals(1, iph.getList().size());
+
+		// assume that the payer removes his device - on re-connect receive the same payment request again
+		prh.getNfcEventHandler().handleMessage(NfcEvent.CONNECTION_LOST, null);
+		handleMessage = messageHandler.handleMessage(data);
+
+		pm = new PaymentMessage((byte[]) handleMessage);
+		assertEquals(PaymentMessage.DEFAULT, pm.getStatus());
+		paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.getPayload());
+
+		assertEquals(userInfosPayer.getUsername(), paymentRequestPayer.getUsernamePayer());
+		assertEquals(userInfosPayee.getUsername(), paymentRequestPayer.getUsernamePayee());
+		assertEquals(paymentInfos.getCurrency().getCode(), paymentRequestPayer.getCurrency().getCode());
+		assertEquals(paymentInfos.getAmount(), paymentRequestPayer.getAmount());
+
+		assertEquals(1, iph.getList().size());
+
+		// receive payment response
+		PaymentRequest paymentRequestPayee = new PaymentRequest(userInfosPayee.getPKIAlgorithm(), userInfosPayee.getKeyNumber(), paymentRequestPayer.getUsernamePayer(), userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentRequestPayer.getTimestamp());
+		assertTrue(paymentRequestPayer.requestsIdentic(paymentRequestPayee));
+		paymentRequestPayee.sign(userInfosPayer.getPrivateKey());
+		ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
+
+		ServerPaymentRequest decode = DecoderFactory.decode(ServerPaymentRequest.class, spr.encode());
+		PaymentRequest paymentRequestPayer2 = decode.getPaymentRequestPayer();
+
+		PaymentResponse pr = new PaymentResponse(PKIAlgorithm.DEFAULT, 1, ServerResponseStatus.SUCCESS, null, paymentRequestPayer2.getUsernamePayer(), paymentRequestPayer2.getUsernamePayee(), paymentRequestPayer2.getCurrency(), paymentRequestPayer2.getAmount(), paymentRequestPayer2.getTimestamp());
+		pr.sign(keyPairServer.getPrivate());
+		ServerPaymentResponse spr2 = new ServerPaymentResponse(pr);
+		byte[] encode = spr2.encode();
+
+		ServerPaymentResponse serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, encode);
+		byte[] encode2 = serverPaymentResponse.getPaymentResponsePayer().encode();
+
+		byte[] handleMessage2 = messageHandler.handleMessage(encode2);
+		PaymentMessage pm2 = new PaymentMessage(handleMessage2);
+		assertEquals(PaymentMessage.DEFAULT, pm2.getStatus());
+		assertEquals(1, pm2.getPayloadLength());
+		assertEquals(PaymentRequestHandler.ACK[0], pm2.getPayload()[0]);
+
+		assertEquals(0, iph.getList().size());
+
+		assertFalse(paymentError);
+		assertNull(paymentErrorObject);
+		assertFalse(paymentForwardToServer);
+		assertNull(paymentForwardToServerObject);
+		assertFalse(paymentNoServerResponse);
+		assertNull(paymentNoServerResponseObject);
+		assertFalse(paymentOtherEvent);
+		assertNull(paymentOtherEventObject);
+
+		assertTrue(paymentSuccess);
+		assertNotNull(paymentSuccessObject);
+		assertTrue(paymentSuccessObject instanceof PaymentResponse);
+		PaymentResponse pr1 = (PaymentResponse) paymentSuccessObject;
+		assertEquals(userInfosPayer.getUsername(), pr1.getUsernamePayer());
+		assertEquals(userInfosPayee.getUsername(), pr1.getUsernamePayee());
+	}
+	
 }

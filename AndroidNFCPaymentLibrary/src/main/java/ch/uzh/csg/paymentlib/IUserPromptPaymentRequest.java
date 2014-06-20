@@ -11,6 +11,4 @@ public interface IUserPromptPaymentRequest {
 	public boolean isPaymentAccepted();
 	
 	
-	//TODO: add isResponseReady() for polling!
-	
 }

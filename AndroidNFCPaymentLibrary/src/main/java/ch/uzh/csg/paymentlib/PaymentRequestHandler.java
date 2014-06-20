@@ -112,6 +112,13 @@ public class PaymentRequestHandler {
 		return new MessageHandler();
 	}
 	
+	/*
+	 * only for test purposes
+	 */
+	protected NfcEventInterface getNfcEventHandler() {
+		return nfcEventHandler;
+	}
+	
 	protected class MessageHandler implements IMessageHandler {
 		
 		private PersistedPaymentRequest persistedPaymentRequest;
@@ -133,8 +140,9 @@ public class PaymentRequestHandler {
 				}
 			}
 			
-			if (false/*pm.isBuyer()*/) {
-				//TODO: implement
+			if (false) {
+			//TODO: implement
+//			if (pm.isBuyer()) {
 				
 			} else {
 				switch (nofMessages) {
@@ -142,16 +150,18 @@ public class PaymentRequestHandler {
 					try {
 						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.data());
 						
-						//TODO: how long is a timestamp valid? add to PaymentError.TIMESTAMP_INVALID
-						
 						boolean paymentAccepted;
 						
 						if (persistedPaymentRequest != null
 								&& persistedPaymentRequest.getUsername().equals(initMessage.getUsername())
 								&& persistedPaymentRequest.getCurrency().getCode() == initMessage.getCurrency().getCode()
 								&& persistedPaymentRequest.getAmount() == initMessage.getAmount()) {
-							// this is a payment resume (the user took his device away to accept/reject the payment
-							
+							/*
+							 * this is a retry because the last try was not
+							 * successful (= no server response) or a payment
+							 * resume (the user took his device away to
+							 * accept/reject the payment)
+							 */
 							paymentAccepted = userPrompt.isPaymentAccepted();
 						} else {
 							// this is a new session
@@ -160,12 +170,6 @@ public class PaymentRequestHandler {
 								// this is a new payment request (not a payment request with a lost server response)
 								persistedPaymentRequest = new PersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
 							}
-							
-							
-							//TODO: on new connection, will the method continue here? other instance will call same method, because MessageHandler is static in CHAS!
-							
-							//TODO: probably implement polling!!
-							
 							
 							paymentAccepted = userPrompt.getPaymentRequestAnswer(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
 						}
@@ -219,7 +223,6 @@ public class PaymentRequestHandler {
 				}
 			}
 
-			//TODO: move this up!
 			return getError(PaymentError.UNEXPECTED_ERROR);
 		}
 		
