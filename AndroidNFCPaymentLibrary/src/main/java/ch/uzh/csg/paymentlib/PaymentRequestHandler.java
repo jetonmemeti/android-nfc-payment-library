@@ -1,5 +1,6 @@
 package ch.uzh.csg.paymentlib;
 
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
 import android.app.Activity;
@@ -28,7 +29,7 @@ public class PaymentRequestHandler {
 	
 	public static final byte[] ACK = new byte[] { (byte) 0xAC };
 	
-	private PaymentEventInterface paymentEventHandler;
+	private IPaymentEventHandler paymentEventHandler;
 	private UserInfos userInfos;
 	private ServerInfos serverInfos;
 	private IUserPromptPaymentRequest userPrompt;
@@ -38,7 +39,7 @@ public class PaymentRequestHandler {
 	private int nofMessages = 0;
 	private boolean aborted = false;
 	
-	public PaymentRequestHandler(Activity activity, PaymentEventInterface paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
+	public PaymentRequestHandler(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
 		checkParameters(activity, paymentEventHandler, userInfos, serverInfos, userPrompt, persistencyHandler);
 		
 		this.paymentEventHandler = paymentEventHandler;
@@ -52,7 +53,7 @@ public class PaymentRequestHandler {
 		CustomHostApduService2.init(c);
 	}
 	
-	private void checkParameters(Activity activity, PaymentEventInterface paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
+	private void checkParameters(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
 		if (activity == null)
 			throw new IllegalArgumentException("The activity cannot be null.");
 		
@@ -106,7 +107,7 @@ public class PaymentRequestHandler {
 	private byte[] getError(PaymentError err) {
 		aborted = true;
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
-		return new PaymentMessage().type(PaymentMessage.ERROR).payload(new byte[] { err.getCode() }).bytes();
+		return new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes();
 	}
 	
 	/*
@@ -146,10 +147,43 @@ public class PaymentRequestHandler {
 				}
 			}
 			
-			if (false) {
-			//TODO: implement
-//			if (pm.isBuyer()) {
-				
+			if (pm.isPayer()) {
+				switch (nofMessages) {
+				case 1:
+					byte[] bytes = userInfos.getUsername().getBytes(Charset.forName("UTF-8"));
+					return new PaymentMessage().payee().payload(bytes).bytes();
+				case 2:
+					serverResponseArrived = true;
+					
+					try {
+						Log.d(TAG, "DBG1: "+Arrays.toString(pm.payload()));
+						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, pm.payload());
+						boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
+						if (!signatureValid) {
+							Log.d(TAG, "exception sig not valid " + serverInfos.getPublicKey());
+							return getError(PaymentError.UNEXPECTED_ERROR);
+						} else {
+							persistencyHandler.delete(persistedPaymentRequest);
+							
+							switch (paymentResponse.getStatus()) {
+							case FAILURE:
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED);
+								break;
+							case SUCCESS:
+								paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse);
+								break;
+							case DUPLICATE_REQUEST:
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST);
+								break;
+							}
+							
+							return new PaymentMessage().payload(ACK).bytes();
+						}
+					} catch (Exception e) {
+						Log.d(TAG, "exception", e);
+						return getError(PaymentError.UNEXPECTED_ERROR);
+					}
+				}
 			} else {
 				switch (nofMessages) {
 				case 1:
@@ -190,7 +224,7 @@ public class PaymentRequestHandler {
 							t.start();
 							
 							persistencyHandler.add(persistedPaymentRequest);
-							return new PaymentMessage().type(PaymentMessage.DEFAULT).payload(encoded).bytes();
+							return new PaymentMessage().payload(encoded).bytes();
 						} else {
 							return getError(PaymentError.PAYER_REFUSED);
 						}
@@ -223,7 +257,7 @@ public class PaymentRequestHandler {
 								break;
 							}
 							
-							return new PaymentMessage().type(PaymentMessage.DEFAULT).payload(ACK).bytes();
+							return new PaymentMessage().payload(ACK).bytes();
 						}
 					} catch (Exception e) {
 						Log.d(TAG, "exception", e);

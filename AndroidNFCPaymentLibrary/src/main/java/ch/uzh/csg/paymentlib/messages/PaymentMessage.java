@@ -1,53 +1,68 @@
 package ch.uzh.csg.paymentlib.messages;
 
-
-
 //TODO: javadoc
 public class PaymentMessage {
 
 	public static final int HEADER_LENGTH = 1;
-
-	// type, uses 3 bits
-	public static final byte EMPTY = 0x00;
-	public static final byte DEFAULT = 0x01;
-	public static final byte RESUME = 0x02; // if not set, then START //TODO:
-	                                        // needed??
-	public static final byte START = 0x03;
-	public static final byte BUYER = 0x04; // if not set, then SELLER
-	public static final byte SELLER = 0x05; // if not set, then SELLER
-	public static final byte UNUSED_1 = 0x06;
-	public static final byte UNUSED_2 = 0x07;
-
-	// flags
-	public static final byte UNUSED_FLAG_1 = 0x08;
-	public static final byte UNUSED_FLAG_2 = 0x10;
-	public static final byte UNUSED_FLAG_3 = 0x20;
-	public static final byte UNUSED_FLAG_4 = 0x40;
-	public static final byte ERROR = (byte) 0x80; // if not set, then PROCEED
+	
+	private static final byte DEFAULT = 0x00;
+	private static final byte ERROR = 0x01; // if not set, then PROCEED
+	private static final byte RESUME = 0x02; // if not set, then START
+	private static final byte PAYER = 0x04; // if not set, then PAYEE
 
 	// data
 	private byte[] payload = new byte[0];
-	private int header;
-
-	public PaymentMessage type(byte messageType) {
-		if (messageType > UNUSED_2) {
-			throw new IllegalArgumentException("largest message type is " + UNUSED_2);
-		}
-		// preserve only the flags
-		header = header & 0xF8;
-		header = header | messageType;
+	private int header = DEFAULT;
+	
+	public PaymentMessage error() {
+		header = header | ERROR;
 		return this;
 	}
-
-	public int type() {
-		// return the last 3 bits
-		return header & 0x7;
+	
+	public boolean isError() {
+		return (header & ERROR) == ERROR;
+	}
+	
+	public PaymentMessage start() {
+		header = header & ~RESUME;
+		return this;
+	}
+	
+	public boolean isStart() {
+		return (header & RESUME) != RESUME;
+	}
+	
+	public PaymentMessage resume() {
+		header = header | RESUME;
+		return this;
+	}
+	
+	public boolean isResume() {
+		return (header & RESUME) == RESUME;
+	}
+	
+	public PaymentMessage payer() {
+		header = header | PAYER;
+		return this;
+	}
+	
+	public boolean isPayer() {
+		return (header & PAYER) == PAYER;
+	}
+	
+	public PaymentMessage payee() {
+		header = header & ~PAYER;
+		return this;
+	}
+	
+	public boolean isPayee() {
+		return (header & PAYER) != PAYER;
 	}
 
 	public PaymentMessage payload(byte[] payload) {
-		if (payload == null) {
-			throw new IllegalArgumentException("data cannot be null");
-		}
+		if (payload == null || payload.length == 0)
+			throw new IllegalArgumentException("payload cannot be null or empty");
+		
 		this.payload = payload;
 		return this;
 	}
@@ -55,25 +70,7 @@ public class PaymentMessage {
 	public byte[] payload() {
 		return payload;
 	}
-
-	public boolean isError() {
-		return (header & ERROR) != 0;
-	}
-
-	public PaymentMessage error(boolean error) {
-		if (error) {
-			header = header | ERROR;
-		} else {
-			header = header & ~ERROR;
-		}
-		return this;
-	}
-
-	public PaymentMessage error() {
-		error(true);
-		return this;
-	}
-
+	
 	// serialization
 	public byte[] bytes() {
 		final int len = payload.length;
@@ -83,17 +80,14 @@ public class PaymentMessage {
 		return output;
 	}
 
-	public boolean isEmpty() {
-		return header == 0 && payload.length == 0;
-	}
-
 	public PaymentMessage bytes(byte[] input) {
 		final int len = input.length;
-		if (!isEmpty() || input == null || len < HEADER_LENGTH) {
-			throw new IllegalArgumentException("Message is empty, no input, or not enough data");
-		}
+		if (!isEmpty())
+			throw new IllegalArgumentException("This message is not empty. You cannot overwrite the content. Instantiate a new object.");
+		
+		if (input == null || len < HEADER_LENGTH)
+			throw new IllegalArgumentException("The input is null or does not contain enough data.");
 
-		// this is now a custom message
 		header = input[0];
 		if (len > HEADER_LENGTH) {
 			payload = new byte[len - HEADER_LENGTH];
@@ -101,12 +95,17 @@ public class PaymentMessage {
 		}
 		return this;
 	}
+	
+	private boolean isEmpty() {
+		return header == 0 && payload.length == 0;
+	}
 
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder("PxMsg: ");
+		StringBuilder sb = new StringBuilder("PaymentMsg: ");
 		sb.append("head: ").append(Integer.toHexString(header));
-		sb.append(",len:").append(payload.length);
+		sb.append(", len:").append(payload.length);
 		return sb.toString();
 	}
+	
 }

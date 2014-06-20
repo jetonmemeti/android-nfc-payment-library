@@ -1,5 +1,6 @@
 package ch.uzh.csg.paymentlib;
 
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
 import android.app.Activity;
@@ -39,7 +40,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	private PaymentType paymentType;
 	
 	private Activity activity;
-	private volatile PaymentEventInterface paymentEventHandler;
+	private volatile IPaymentEventHandler paymentEventHandler;
 	
 	private UserInfos userInfos;
 	private ServerInfos serverInfos;
@@ -53,7 +54,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	private Thread timeoutHandler;
 	private volatile boolean serverResponseArrived = false;
 	
-	public PaymentRequestInitializer(Activity activity, PaymentEventInterface paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException,  NfcLibException {
+	public PaymentRequestInitializer(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException,  NfcLibException {
 		this(activity, null, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
 	}
 	
@@ -62,7 +63,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	 * NfcTransceiver. For productive use the public constructor, otherwise the
 	 * NFC will not work.
 	 */
-	protected PaymentRequestInitializer(Activity activity, NfcTransceiver nfcTransceiver, PaymentEventInterface paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NfcLibException {
+	protected PaymentRequestInitializer(Activity activity, NfcTransceiver nfcTransceiver, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NfcLibException {
 		checkParameters(activity, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
 		
 		this.paymentType = type;
@@ -75,7 +76,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		initPayment(nfcTransceiver);
 	}
 
-	private void checkParameters(Activity activity, PaymentEventInterface paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException {
+	private void checkParameters(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException {
 		if (activity == null)
 			throw new IllegalArgumentException("The activity cannot be null.");
 		
@@ -116,7 +117,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	
 	private void sendError(PaymentError err) {
 		aborted = true;
-		nfcTransceiver.transceive(new PaymentMessage().type(PaymentMessage.ERROR).payload(new byte[] { err.getCode() }).bytes());
+		nfcTransceiver.transceive(new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes());
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
 	}
 	
@@ -162,7 +163,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case INITIALIZED:
 				try {
 					InitMessagePayee initMessage = new InitMessagePayee(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
-					nfcTransceiver.transceive(new PaymentMessage().type(PaymentMessage.DEFAULT).payload(initMessage.encode()).bytes());
+					nfcTransceiver.transceive(new PaymentMessage().payee().payload(initMessage.encode()).bytes());
 				} catch (Exception e) {
 					sendError(PaymentError.UNEXPECTED_ERROR);
 				}
@@ -232,7 +233,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				if (now - startTime > Config.SERVER_CALL_TIMEOUT) {
 					aborted = true;
 					paymentEventHandler.handleMessage(PaymentEvent.NO_SERVER_RESPONSE, null);
-					PaymentMessage pm = new PaymentMessage().type(PaymentMessage.ERROR).payload(new byte[] { PaymentError.NO_SERVER_RESPONSE.getCode() });
+					PaymentMessage pm = new PaymentMessage().error().payload(new byte[] { PaymentError.NO_SERVER_RESPONSE.getCode() });
 					nfcTransceiver.transceive(pm.bytes());
 					break;
 				}
@@ -251,25 +252,42 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		serverResponseArrived = true;
 		
 		try {
-			PaymentResponse paymentResponse;
-			if (serverPaymentResponse.getPaymentResponsePayee() != null)
-				paymentResponse = serverPaymentResponse.getPaymentResponsePayee();
-			else
-				paymentResponse = serverPaymentResponse.getPaymentResponsePayer();
+			PaymentResponse toProcess = null;
+			PaymentResponse toForward = null;
 			
-			boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
+			switch (paymentType) {
+			case REQUEST_PAYMENT:
+				if (serverPaymentResponse.getPaymentResponsePayee() != null) {
+					toProcess = serverPaymentResponse.getPaymentResponsePayee();
+					toForward = serverPaymentResponse.getPaymentResponsePayer();
+				} else {
+					toProcess = serverPaymentResponse.getPaymentResponsePayer();
+					toForward = toProcess;
+				}
+				break;
+			case SEND_PAYMENT:
+				toProcess = serverPaymentResponse.getPaymentResponsePayer();
+				if (serverPaymentResponse.getPaymentResponsePayee() != null) {
+					toForward = serverPaymentResponse.getPaymentResponsePayee();
+				} else {
+					toForward = toProcess;
+				}
+				break;
+			}
+			
+			boolean signatureValid = toProcess.verify(serverInfos.getPublicKey());
 			if (!signatureValid) {
 				Log.d(TAG, "signature not valid");
 				sendError(PaymentError.UNEXPECTED_ERROR);
 			} else {
-				switch (paymentResponse.getStatus()) {
+				switch (toProcess.getStatus()) {
 				case FAILURE:
 					Log.d(TAG, "payment failure");
 					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED);
 					break;
 				case SUCCESS:
 					Log.d(TAG, "payment success");
-					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse);
+					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, toProcess);
 					break;
 				case DUPLICATE_REQUEST:
 					Log.d(TAG, "payment duplicate");
@@ -277,10 +295,17 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					break;
 				}
 				
-				byte[] encode = serverPaymentResponse.getPaymentResponsePayer().encode();
-				
+				byte[] encode = toForward.encode();
 				Log.d(TAG, "DBG2: "+Arrays.toString(encode)+ "//"+serverInfos.getPublicKey());
-				nfcTransceiver.transceive(new PaymentMessage().type(PaymentMessage.DEFAULT).payload(encode).bytes());
+				
+				switch (paymentType) {
+				case REQUEST_PAYMENT:
+					nfcTransceiver.transceive(new PaymentMessage().payee().payload(encode).bytes());
+					break;
+				case SEND_PAYMENT:
+					nfcTransceiver.transceive(new PaymentMessage().payer().payload(encode).bytes());
+					break;
+				}
 			}
 		} catch (Exception e) {
 			Log.e(TAG, "exception", e);
@@ -291,24 +316,89 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	private NfcEvent nfcEventHandlerSend = new NfcEvent() {
 		
 		@Override
-		public void handleMessage(Type event, Object object) {
-			// TODO Auto-generated method stub
+		public void handleMessage(Type event, Object object) {	
+			if(object instanceof byte[]) {
+				Log.d(TAG, "handle payment request init message: "+event.name()+ " / " + Arrays.toString((byte[]) object));
+			} else {
+				Log.d(TAG, "handle payment request init message: "+event.name()+ " / " + object);
+			}
+			if (aborted) {
+				if (!disabled) {
+					nfcTransceiver.disable(activity);
+					disabled = true;
+				}
+				return;
+			}
+			
 			switch (event) {
+			case INIT_FAILED:
 			case FATAL_ERROR:
+				aborted = true;
+				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
+				nfcTransceiver.disable(activity);
 				break;
 			case CONNECTION_LOST:
+				nofMessages = 0;
 				break;
-			case INITIALIZED:
-				break;
-			case INIT_FAILED:
-				break;
-			case MESSAGE_RECEIVED:
-				break;
-			case MESSAGE_RETURNED:
+			case MESSAGE_RETURNED: // do nothing, concerns only the HCE
 				break;
 			case MESSAGE_SENT:
+				nofMessages++;
 				break;
-			default:
+			case INITIALIZED:
+				try {
+					//send empty message, we just need the payee's username
+					nfcTransceiver.transceive(new PaymentMessage().payer().payload(new byte[] { 0x00 }).bytes());
+				} catch (Exception e) {
+					sendError(PaymentError.UNEXPECTED_ERROR);
+				}
+				break;
+			case MESSAGE_RECEIVED:
+				if (object == null || !(object instanceof byte[])) {
+					sendError(PaymentError.UNEXPECTED_ERROR);
+					break;
+				}
+				byte[] tmp = (byte[]) object;
+				PaymentMessage response = new PaymentMessage().bytes(tmp);
+				if (response.isError()) {
+					PaymentError paymentError = null;
+					if (response.payload() != null && response.payload().length > 0) {
+						try {
+							paymentError = PaymentError.getPaymentError(response.payload()[0]);
+						} catch (UnknownPaymentErrorException e) {
+						}
+					}
+					
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, paymentError);
+					nfcTransceiver.disable(activity);
+					break;
+				}
+				
+				switch (nofMessages) {
+				case 1:
+					String usernamePayee = new String(response.payload(), Charset.forName("UTF-8"));
+					try {
+						PaymentRequest paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentInfos.getTimestamp());
+						paymentRequestPayer.sign(userInfos.getPrivateKey());
+						ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer);
+						paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
+						
+						if (timeoutHandler != null && !timeoutHandler.isInterrupted()) {
+							timeoutHandler.interrupt();
+						}
+						timeoutHandler = new Thread(new ServerTimeoutHandler());
+						timeoutHandler.start();
+					} catch (Exception e) {
+						sendError(PaymentError.UNEXPECTED_ERROR);
+					}
+					break;
+				case 2:
+					if (timeoutHandler != null && !timeoutHandler.isInterrupted())
+						timeoutHandler.interrupt();
+					
+					nfcTransceiver.disable(activity);
+					break;
+				}
 				break;
 			}
 		}

@@ -1,6 +1,7 @@
 package ch.uzh.csg.paymentlib;
 
-public interface PaymentEventInterface {
+//TODO: javadoc
+public interface IPaymentEventHandler {
 
 	public void handleMessage(PaymentEvent event, Object object);
 	
