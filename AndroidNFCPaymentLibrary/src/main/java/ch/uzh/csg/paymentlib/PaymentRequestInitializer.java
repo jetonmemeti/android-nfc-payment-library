@@ -120,7 +120,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	
 	private void sendError(PaymentError err) {
 		aborted = true;
-		nfcTransceiver.transceive(new PaymentMessage().type(PaymentMessage.ERROR).payload(new byte[] { err.getCode() }).bytes());
+		nfcTransceiver.transceive(new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes());
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
 	}
 	
@@ -166,7 +166,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case INITIALIZED:
 				try {
 					InitMessagePayee initMessage = new InitMessagePayee(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
-					nfcTransceiver.transceive(new PaymentMessage().type(PaymentMessage.DEFAULT).payload(initMessage.encode()).bytes());
+					nfcTransceiver.transceive(new PaymentMessage().payload(initMessage.encode()).bytes());
 				} catch (Exception e) {
 					sendError(PaymentError.UNEXPECTED_ERROR);
 				}
@@ -236,7 +236,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				if (now - startTime > Config.SERVER_CALL_TIMEOUT) {
 					aborted = true;
 					paymentEventHandler.handleMessage(PaymentEvent.NO_SERVER_RESPONSE, null);
-					PaymentMessage pm = new PaymentMessage().type(PaymentMessage.ERROR).payload(new byte[] { PaymentError.NO_SERVER_RESPONSE.getCode() });
+					PaymentMessage pm = new PaymentMessage().error().payload(new byte[] { PaymentError.NO_SERVER_RESPONSE.getCode() });
 					nfcTransceiver.transceive(pm.bytes());
 					break;
 				}
@@ -284,7 +284,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				byte[] encode = serverPaymentResponse.getPaymentResponsePayer().encode();
 				
 				Log.d(TAG, "DBG2: "+Arrays.toString(encode)+ "//"+serverInfos.getPublicKey());
-				nfcTransceiver.transceive(new PaymentMessage().type(PaymentMessage.DEFAULT).payload(encode).bytes());
+				nfcTransceiver.transceive(new PaymentMessage().payload(encode).bytes());
 			}
 		} catch (Exception e) {
 			Log.e(TAG, "exception", e);

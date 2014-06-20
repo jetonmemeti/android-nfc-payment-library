@@ -107,7 +107,7 @@ public class PaymentRequestHandler {
 	private byte[] getError(PaymentError err) {
 		aborted = true;
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
-		return new PaymentMessage().type(PaymentMessage.ERROR).payload(new byte[] { err.getCode() }).bytes();
+		return new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes();
 	}
 	
 	/*
@@ -191,7 +191,7 @@ public class PaymentRequestHandler {
 							t.start();
 							
 							persistencyHandler.add(persistedPaymentRequest);
-							return new PaymentMessage().type(PaymentMessage.DEFAULT).payload(encoded).bytes();
+							return new PaymentMessage().payload(encoded).bytes();
 						} else {
 							return getError(PaymentError.PAYER_REFUSED);
 						}
@@ -224,7 +224,7 @@ public class PaymentRequestHandler {
 								break;
 							}
 							
-							return new PaymentMessage().type(PaymentMessage.DEFAULT).payload(ACK).bytes();
+							return new PaymentMessage().payload(ACK).bytes();
 						}
 					} catch (Exception e) {
 						Log.d(TAG, "exception", e);
