@@ -1,6 +1,9 @@
 package ch.uzh.csg.paymentlib;
 
+import java.util.Arrays;
+
 import android.app.Activity;
+import android.util.Log;
 import ch.uzh.csg.mbps.customserialization.DecoderFactory;
 import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
@@ -21,6 +24,8 @@ import ch.uzh.csg.paymentlib.util.Config;
 
 //TODO: javadoc
 public class PaymentRequestHandler {
+	
+	public static final String TAG = "##NFC## PaymentRequestHandler";
 	
 	public static final byte[] ACK = new byte[] { (byte) 0xAC };
 	
@@ -102,7 +107,7 @@ public class PaymentRequestHandler {
 	private byte[] getError(PaymentError err) {
 		aborted = true;
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
-		return new PaymentMessage().type(PaymentMessage.ERROR).bytes(new byte[] { err.getCode() }).bytes();
+		return new PaymentMessage().type(PaymentMessage.ERROR).data(new byte[] { err.getCode() }).bytes();
 	}
 	
 	/*
@@ -119,6 +124,7 @@ public class PaymentRequestHandler {
 
 
 		public byte[] handleMessage(byte[] message) {
+			Log.d(TAG, "got payment message: "+Arrays.toString(message));
 			if (aborted)
 				return null;
 			

@@ -1,5 +1,7 @@
 package ch.uzh.csg.paymentlib.messages;
 
+import android.util.Log;
+
 
 //TODO: javadoc
 public class PaymentMessage {
@@ -56,7 +58,7 @@ public class PaymentMessage {
 	}
 
 	public boolean isError() {
-		return (header & ERROR) > 0;
+		return (header & ERROR) != 0;
 	}
 
 	public PaymentMessage error(boolean error) {
