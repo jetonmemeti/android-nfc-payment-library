@@ -1,5 +1,6 @@
 package ch.uzh.csg.paymentlib;
 
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
 import android.app.Activity;
@@ -147,10 +148,43 @@ public class PaymentRequestHandler {
 				}
 			}
 			
-			if (false) {
-			//TODO: implement
-//			if (pm.isBuyer()) {
-				
+			if (pm.isPayer()) {
+				switch (nofMessages) {
+				case 1:
+					byte[] bytes = userInfos.getUsername().getBytes(Charset.forName("UTF-8"));
+					return new PaymentMessage().payee().payload(bytes).bytes();
+				case 2:
+					serverResponseArrived = true;
+					
+					try {
+						Log.d(TAG, "DBG1: "+Arrays.toString(pm.payload()));
+						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, pm.payload());
+						boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
+						if (!signatureValid) {
+							Log.d(TAG, "exception sig not valid " + serverInfos.getPublicKey());
+							return getError(PaymentError.UNEXPECTED_ERROR);
+						} else {
+							persistencyHandler.delete(persistedPaymentRequest);
+							
+							switch (paymentResponse.getStatus()) {
+							case FAILURE:
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED);
+								break;
+							case SUCCESS:
+								paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse);
+								break;
+							case DUPLICATE_REQUEST:
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST);
+								break;
+							}
+							
+							return new PaymentMessage().payload(ACK).bytes();
+						}
+					} catch (Exception e) {
+						Log.d(TAG, "exception", e);
+						return getError(PaymentError.UNEXPECTED_ERROR);
+					}
+				}
 			} else {
 				switch (nofMessages) {
 				case 1:
