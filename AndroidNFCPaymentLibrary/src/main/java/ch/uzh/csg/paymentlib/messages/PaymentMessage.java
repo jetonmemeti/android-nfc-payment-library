@@ -7,8 +7,7 @@ public class PaymentMessage {
 	
 	private static final byte DEFAULT = 0x00;
 	private static final byte ERROR = 0x01; // if not set, then PROCEED
-	private static final byte RESUME = 0x02; // if not set, then START
-	private static final byte PAYER = 0x04; // if not set, then PAYEE
+	private static final byte PAYER = 0x02; // if not set, then PAYEE
 
 	// data
 	private byte[] payload = new byte[0];
@@ -21,24 +20,6 @@ public class PaymentMessage {
 	
 	public boolean isError() {
 		return (header & ERROR) == ERROR;
-	}
-	
-	public PaymentMessage start() {
-		header = header & ~RESUME;
-		return this;
-	}
-	
-	public boolean isStart() {
-		return (header & RESUME) != RESUME;
-	}
-	
-	public PaymentMessage resume() {
-		header = header | RESUME;
-		return this;
-	}
-	
-	public boolean isResume() {
-		return (header & RESUME) == RESUME;
 	}
 	
 	public PaymentMessage payer() {
