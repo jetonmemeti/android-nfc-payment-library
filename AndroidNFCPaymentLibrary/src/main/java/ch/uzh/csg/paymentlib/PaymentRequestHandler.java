@@ -93,7 +93,7 @@ public class PaymentRequestHandler {
 				break;
 			case MESSAGE_RECEIVED: //do nothing, handle in IMessageHandler
 				break;
-			case MESSAGE_RETURNED: //do nothing
+			case MESSAGE_SENT_HCE: //do nothing
 				break;
 			case MESSAGE_SENT:// do nothing, concerns only the NfcTransceiver
 				break;

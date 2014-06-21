@@ -155,7 +155,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case CONNECTION_LOST:
 				nofMessages = 0;
 				break;
-			case MESSAGE_RETURNED: // do nothing, concerns only the HCE
+			case MESSAGE_SENT_HCE: // do nothing, concerns only the HCE
 				break;
 			case MESSAGE_SENT:
 				nofMessages++;
@@ -340,7 +340,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case CONNECTION_LOST:
 				nofMessages = 0;
 				break;
-			case MESSAGE_RETURNED: // do nothing, concerns only the HCE
+			case MESSAGE_SENT_HCE: // do nothing, concerns only the HCE
 				break;
 			case MESSAGE_SENT:
 				nofMessages++;
