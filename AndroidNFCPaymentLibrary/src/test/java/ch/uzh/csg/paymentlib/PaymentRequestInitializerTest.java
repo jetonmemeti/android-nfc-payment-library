@@ -37,7 +37,8 @@ import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.nfclib.NfcEvent;
-import ch.uzh.csg.nfclib.transceiver.NfcTransceiver;
+import ch.uzh.csg.nfclib.NfcEvent.Type;
+import ch.uzh.csg.nfclib.NfcTransceiver;
 import ch.uzh.csg.paymentlib.PaymentRequestInitializer.PaymentType;
 import ch.uzh.csg.paymentlib.container.PaymentInfos;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
@@ -96,6 +97,30 @@ public class PaymentRequestInitializerTest {
 				paymentErrorObject = object;
 				break;
 			case FORWARD_TO_SERVER:
+				break;
+			case NO_SERVER_RESPONSE:
+				paymentServerResponseTimeout = true;
+				paymentServerResponseTimeoutObject = object;
+				break;
+			case SUCCESS:
+				paymentSuccess = true;
+				paymentSuccessObject = object;
+				break;
+			default:
+				paymentOtherEvent = true;
+				paymentOtherEventObject = object;
+				break;
+			}
+		}
+
+		@Override
+		public void handleMessage(PaymentEvent event, Object object, IServerResponseListener caller) {
+			switch (event) {
+			case ERROR:
+			case NO_SERVER_RESPONSE:
+			case SUCCESS:
+				break;
+			case FORWARD_TO_SERVER:
 				if (serverTimeout) {
 					try {
 						Thread.sleep(Config.SERVER_CALL_TIMEOUT+100);
@@ -115,9 +140,7 @@ public class PaymentRequestInitializerTest {
 						String reason = "I don't like you";
 						PaymentResponse pr = new PaymentResponse(PKIAlgorithm.DEFAULT, 1, ServerResponseStatus.FAILURE, reason, paymentRequestPayer.getUsernamePayer(), paymentRequestPayer.getUsernamePayee(), paymentRequestPayer.getCurrency(), paymentRequestPayer.getAmount(), paymentRequestPayer.getTimestamp());
 						pr.sign(keyPairServer.getPrivate());
-						ServerPaymentResponse spr = new ServerPaymentResponse(pr);
-						byte[] encode = spr.encode();
-						pri.onServerResponse(encode);
+						pri.onServerResponse(new ServerPaymentResponse(pr));
 					} catch (Exception e) {
 						assertTrue(false);
 					}
@@ -129,25 +152,11 @@ public class PaymentRequestInitializerTest {
 						
 						PaymentResponse pr = new PaymentResponse(PKIAlgorithm.DEFAULT, 1, ServerResponseStatus.SUCCESS, null, paymentRequestPayer.getUsernamePayer(), paymentRequestPayer.getUsernamePayee(), paymentRequestPayer.getCurrency(), paymentRequestPayer.getAmount(), paymentRequestPayer.getTimestamp());
 						pr.sign(keyPairServer.getPrivate());
-						ServerPaymentResponse spr = new ServerPaymentResponse(pr);
-						byte[] encode = spr.encode();
-						pri.onServerResponse(encode);
+						pri.onServerResponse(new ServerPaymentResponse(pr));
 					} catch (Exception e) {
 						assertTrue(false);
 					}
 				}
-				break;
-			case NO_SERVER_RESPONSE:
-				paymentServerResponseTimeout = true;
-				paymentServerResponseTimeoutObject = object;
-				break;
-			case SUCCESS:
-				paymentSuccess = true;
-				paymentSuccessObject = object;
-				break;
-			default:
-				paymentOtherEvent = true;
-				paymentOtherEventObject = object;
 				break;
 			}
 		}
@@ -186,16 +195,16 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_SENT, null);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
-				PaymentMessage pm = new PaymentMessage((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.getStatus());
+				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
+				assertEquals(PaymentMessage.DEFAULT, pm.header());
 				
-				byte[] response = new PaymentMessage(PaymentMessage.ERROR, new byte[] { PaymentError.PAYER_REFUSED.getCode() }).getData();
+				byte[] response = new PaymentMessage().error().payload(new byte[] { PaymentError.PAYER_REFUSED.getCode() }).bytes();
 				assertNotNull(response);
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_RECEIVED, response);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_RECEIVED, response);
 				return null;
 			}
 		});
@@ -212,7 +221,7 @@ public class PaymentRequestInitializerTest {
 		stubber2.when(transceiver).disable(hostActivity);
 		
 		//start test case manually, since this would be started on an nfc contact!
-		pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.INITIALIZED, null);
+		pri.getNfcEventHandlerRequest().handleMessage(Type.INITIALIZED, null);
 		
 		
 		verify(transceiver).transceive(any(byte[].class));
@@ -257,38 +266,38 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_SENT, null);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
-				PaymentMessage pm = new PaymentMessage((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.getStatus());
+				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
+				assertEquals(PaymentMessage.DEFAULT, pm.header());
 				
-				InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.getPayload());
+				InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
 				
 				PaymentRequest pr = new PaymentRequest(userInfosPayer.getPKIAlgorithm(), userInfosPayer.getKeyNumber(), userInfosPayer.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount()+1, System.currentTimeMillis());
 				pr.sign(userInfosPayer.getPrivateKey());
 				
-				byte[] response = new PaymentMessage(PaymentMessage.DEFAULT, pr.encode()).getData();
+				byte[] response = new PaymentMessage().payload(pr.encode()).bytes();
 				assertNotNull(response);
 				
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_RECEIVED, response);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_RECEIVED, response);
 				return null;
 			}
 		}).doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_SENT, null);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
-				PaymentMessage pm = new PaymentMessage((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.ERROR, pm.getStatus());
+				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
+				assertEquals(PaymentMessage.ERROR, pm.header());
 				
-				byte[] response = new PaymentMessage(PaymentMessage.ERROR, new byte[] { pm.getPayload()[0] }).getData();
+				byte[] response = new PaymentMessage().error().payload(new byte[] { pm.payload()[0] }).bytes();
 				assertNotNull(response);
 				
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_RECEIVED, response);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_RECEIVED, response);
 				return null;
 			}
 		});
@@ -305,7 +314,7 @@ public class PaymentRequestInitializerTest {
 		stubber2.when(transceiver).disable(hostActivity);
 		
 		//start test case manually, since this would be started on an nfc contact!
-		pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.INITIALIZED, null);
+		pri.getNfcEventHandlerRequest().handleMessage(Type.INITIALIZED, null);
 		
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
@@ -351,42 +360,42 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_SENT, null);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
-				PaymentMessage pm = new PaymentMessage((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.getStatus());
+				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
+				assertEquals(PaymentMessage.DEFAULT, pm.header());
 				
-				InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.getPayload());
+				InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
 				
 				PaymentRequest pr = new PaymentRequest(userInfosPayer.getPKIAlgorithm(), userInfosPayer.getKeyNumber(), userInfosPayer.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
 				pr.sign(userInfosPayer.getPrivateKey());
 				
-				byte[] response = new PaymentMessage(PaymentMessage.DEFAULT, pr.encode()).getData();
+				byte[] response = new PaymentMessage().payload(pr.encode()).bytes();
 				assertNotNull(response);
 				
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_RECEIVED, response);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_RECEIVED, response);
 				return null;
 			}
 		}).doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_SENT, null);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
-				PaymentMessage pm = new PaymentMessage((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.getStatus());
+				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
+				assertEquals(PaymentMessage.DEFAULT, pm.header());
 				
-				PaymentResponse pr = DecoderFactory.decode(PaymentResponse.class, pm.getPayload());
+				PaymentResponse pr = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 				assertNotNull(pr);
 				assertEquals(ServerResponseStatus.FAILURE.getCode(), pr.getStatus().getCode());
 				
-				byte[] response = new PaymentMessage(PaymentMessage.DEFAULT, PaymentRequestHandler.ACK).getData();
+				byte[] response = new PaymentMessage().payload(PaymentRequestHandler.ACK).bytes();
 				assertNotNull(response);
 				
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_RECEIVED, response);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_RECEIVED, response);
 				return null;
 			}
 		});
@@ -403,7 +412,7 @@ public class PaymentRequestInitializerTest {
 		stubber2.when(transceiver).disable(hostActivity);
 		
 		//start test case manually, since this would be started on an nfc contact!
-		pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.INITIALIZED, null);
+		pri.getNfcEventHandlerRequest().handleMessage(Type.INITIALIZED, null);
 		
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
@@ -449,42 +458,42 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_SENT, null);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
-				PaymentMessage pm = new PaymentMessage((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.getStatus());
+				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
+				assertEquals(PaymentMessage.DEFAULT, pm.header());
 				
-				InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.getPayload());
+				InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
 				
 				PaymentRequest pr = new PaymentRequest(userInfosPayer.getPKIAlgorithm(), userInfosPayer.getKeyNumber(), userInfosPayer.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
 				pr.sign(userInfosPayer.getPrivateKey());
 				
-				byte[] response = new PaymentMessage(PaymentMessage.DEFAULT, pr.encode()).getData();
+				byte[] response = new PaymentMessage().payload(pr.encode()).bytes();
 				assertNotNull(response);
 				
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_RECEIVED, response);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_RECEIVED, response);
 				return null;
 			}
 		}).doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_SENT, null);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
-				PaymentMessage pm = new PaymentMessage((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.getStatus());
+				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
+				assertEquals(PaymentMessage.DEFAULT, pm.header());
 				
-				PaymentResponse pr = DecoderFactory.decode(PaymentResponse.class, pm.getPayload());
+				PaymentResponse pr = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 				assertNotNull(pr);
 				assertEquals(ServerResponseStatus.SUCCESS.getCode(), pr.getStatus().getCode());
 				
-				byte[] response = new PaymentMessage(PaymentMessage.DEFAULT, PaymentRequestHandler.ACK).getData();
+				byte[] response = new PaymentMessage().payload(PaymentRequestHandler.ACK).bytes();
 				assertNotNull(response);
 				
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_RECEIVED, response);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_RECEIVED, response);
 				return null;
 			}
 		});
@@ -501,8 +510,9 @@ public class PaymentRequestInitializerTest {
 		stubber2.when(transceiver).disable(hostActivity);
 		
 		//start test case manually, since this would be started on an nfc contact!
-		pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.INITIALIZED, null);
+		pri.getNfcEventHandlerRequest().handleMessage(Type.INITIALIZED, null);
 		
+//		Thread.sleep(1000);
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
 		verify(transceiver).disable(any(Activity.class));
@@ -549,40 +559,40 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_SENT, null);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
-				PaymentMessage pm = new PaymentMessage((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.getStatus());
+				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
+				assertEquals(PaymentMessage.DEFAULT, pm.header());
 				
-				InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.getPayload());
+				InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
 				
 				PaymentRequest pr = new PaymentRequest(userInfosPayer.getPKIAlgorithm(), userInfosPayer.getKeyNumber(), userInfosPayer.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
 				pr.sign(userInfosPayer.getPrivateKey());
 				
-				byte[] response = new PaymentMessage(PaymentMessage.DEFAULT, pr.encode()).getData();
+				byte[] response = new PaymentMessage().payload(pr.encode()).bytes();
 				assertNotNull(response);
 				
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_RECEIVED, response);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_RECEIVED, response);
 				return null;
 			}
 		}).doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_SENT, null);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
-				PaymentMessage pm = new PaymentMessage((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.ERROR, pm.getStatus());
-				assertEquals(1, pm.getPayloadLength());
-				assertEquals(PaymentError.NO_SERVER_RESPONSE.getCode(), pm.getPayload()[0]);
+				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
+				assertEquals(PaymentMessage.ERROR, pm.header());
+				assertEquals(1, pm.payload().length);
+				assertEquals(PaymentError.NO_SERVER_RESPONSE.getCode(), pm.payload()[0]);
 				
-				byte[] response = new PaymentMessage(PaymentMessage.ERROR, new byte[] { pm.getPayload()[0] }).getData();
+				byte[] response = new PaymentMessage().error().payload(new byte[] { pm.payload()[0] }).bytes();
 				assertNotNull(response);
 				
-				pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.MESSAGE_RECEIVED, response);
+				pri.getNfcEventHandlerRequest().handleMessage(Type.MESSAGE_RECEIVED, response);
 				return null;
 			}
 		});
@@ -599,7 +609,7 @@ public class PaymentRequestInitializerTest {
 		stubber2.when(transceiver).disable(hostActivity);
 		
 		//start test case manually, since this would be started on an nfc contact!
-		pri.getNfcEventHandlerRequest().handleMessage(NfcEvent.INITIALIZED, null);
+		pri.getNfcEventHandlerRequest().handleMessage(Type.INITIALIZED, null);
 		
 		Thread.sleep(Config.SERVER_CALL_TIMEOUT+500);
 		
@@ -618,5 +628,7 @@ public class PaymentRequestInitializerTest {
 		assertTrue(paymentServerResponseTimeout);
 		assertNull(paymentServerResponseTimeoutObject);
 	}
+	
+	//TODO: add test case for other scenario (payer intis)
 	
 }
