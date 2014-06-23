@@ -137,7 +137,7 @@ public class PaymentRequestHandlerTest {
 
 		KeyPair keyPairPayee = TestUtils.generateKeyPair();
 		UserInfos userInfosPayee = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
-		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1, System.currentTimeMillis());
 		
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();
 		KeyPair keyPairServer = TestUtils.generateKeyPair();
@@ -241,7 +241,7 @@ public class PaymentRequestHandlerTest {
 
 		KeyPair keyPairPayee = TestUtils.generateKeyPair();
 		UserInfos userInfosPayee = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
-		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1, System.currentTimeMillis());
 		
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();
 		KeyPair keyPairServer = TestUtils.generateKeyPair();
@@ -345,7 +345,7 @@ public class PaymentRequestHandlerTest {
 
 		KeyPair keyPairPayee = TestUtils.generateKeyPair();
 		UserInfos userInfosPayee = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
-		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1, System.currentTimeMillis());
 		
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();
 		KeyPair keyPairServer = TestUtils.generateKeyPair();
@@ -420,7 +420,7 @@ public class PaymentRequestHandlerTest {
 
 		KeyPair keyPairPayee = TestUtils.generateKeyPair();
 		UserInfos userInfosPayee = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
-		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1, System.currentTimeMillis());
 		
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();
 		KeyPair keyPairServer = TestUtils.generateKeyPair();
@@ -562,7 +562,7 @@ public class PaymentRequestHandlerTest {
 
 		KeyPair keyPairPayee = TestUtils.generateKeyPair();
 		UserInfos userInfosPayee = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
-		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1, System.currentTimeMillis());
 
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();
 		KeyPair keyPairServer = TestUtils.generateKeyPair();

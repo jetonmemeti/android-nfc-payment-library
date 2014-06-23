@@ -10,14 +10,6 @@ public class PaymentInfos {
 	private long amount;
 	private long timestamp;
 	
-	public PaymentInfos(Currency currency, long amount) throws IllegalArgumentException {
-		checkParams(currency, amount);
-		
-		this.currency = currency;
-		this.amount = amount;
-		this.timestamp = 0;
-	}
-	
 	public PaymentInfos(Currency currency, long amount, long timestamp) throws IllegalArgumentException {
 		checkParams(currency, amount, timestamp);
 		
@@ -26,14 +18,6 @@ public class PaymentInfos {
 		this.timestamp = timestamp;
 	}
 
-	private void checkParams(Currency currency, long amount) throws IllegalArgumentException {
-		if (currency == null)
-			throw new IllegalArgumentException("The currency cannot be null.");
-		
-		if (amount <= 0)
-			throw new IllegalArgumentException("The amount must be greatern than 0.");
-	}
-	
 	private void checkParams(Currency currency, long amount, long timestamp) throws IllegalArgumentException {
 		if (currency == null)
 			throw new IllegalArgumentException("The currency cannot be null.");
@@ -42,7 +26,7 @@ public class PaymentInfos {
 			throw new IllegalArgumentException("The amount must be greatern than 0.");
 		
 		if (timestamp <= 0)
-			throw new IllegalArgumentException("The amount must be greatern than 0.");
+			throw new IllegalArgumentException("The timestamp must be greatern than 0.");
 	}
 	
 	public Currency getCurrency() {
