@@ -151,6 +151,10 @@ public class PaymentRequestHandler {
 				switch (nofMessages) {
 				case 1:
 					byte[] bytes = userInfos.getUsername().getBytes(Charset.forName("UTF-8"));
+					
+					Thread t = new Thread(new TimeoutHandler());
+					t.start();
+					
 					return new PaymentMessage().payee().payload(bytes).bytes();
 				case 2:
 					serverResponseArrived = true;
