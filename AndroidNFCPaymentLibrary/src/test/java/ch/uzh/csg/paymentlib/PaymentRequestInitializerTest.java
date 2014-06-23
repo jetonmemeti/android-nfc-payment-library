@@ -185,7 +185,7 @@ public class PaymentRequestInitializerTest {
 		KeyPair keyPairServer = TestUtils.generateKeyPair();
 		
 		UserInfos userInfos = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
-		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1, System.currentTimeMillis());
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
 		NfcTransceiver transceiver = mock(NfcTransceiver.class);
@@ -253,7 +253,7 @@ public class PaymentRequestInitializerTest {
 		KeyPair keyPairServer = TestUtils.generateKeyPair();
 		
 		UserInfos userInfosPayee = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
-		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1, System.currentTimeMillis());
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();
@@ -347,7 +347,7 @@ public class PaymentRequestInitializerTest {
 		keyPairServer = TestUtils.generateKeyPair();
 		
 		UserInfos userInfosPayee = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
-		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1, System.currentTimeMillis());
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();
@@ -445,7 +445,7 @@ public class PaymentRequestInitializerTest {
 		keyPairServer = TestUtils.generateKeyPair();
 		
 		UserInfos userInfosPayee = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
-		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1, System.currentTimeMillis());
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();
@@ -544,7 +544,7 @@ public class PaymentRequestInitializerTest {
 		keyPairServer = TestUtils.generateKeyPair();
 		
 		UserInfos userInfosPayee = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
-		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1, System.currentTimeMillis());
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();

@@ -10,6 +10,11 @@ public class PaymentInfos {
 	private long amount;
 	private long timestamp;
 	
+	//sets timestamp to system.currenttimemillis()
+	public PaymentInfos(Currency currency, long amount) throws IllegalArgumentException {
+		this(currency, amount, System.currentTimeMillis());
+	}
+	
 	public PaymentInfos(Currency currency, long amount, long timestamp) throws IllegalArgumentException {
 		checkParams(currency, amount, timestamp);
 		
