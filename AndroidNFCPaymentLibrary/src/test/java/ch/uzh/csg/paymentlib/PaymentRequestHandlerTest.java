@@ -128,6 +128,33 @@ public class PaymentRequestHandlerTest {
 		}
 	};
 	
+	private IUserPromptPaymentRequest defaultUserPrompt = new IUserPromptPaymentRequest() {
+		@Override
+		public boolean getPaymentRequestAnswer(String username, Currency currency, long amount) {
+			// accept the payment
+			return true;
+		}
+
+		@Override
+		public boolean isPaymentAccepted() {
+			// accept the payment
+			return true;
+		}
+	};
+	
+	private IPersistencyHandler defaultPersistencyHandler = new IPersistencyHandler() {
+		@Override
+		public PersistedPaymentRequest getPersistedPaymentRequest(String username, Currency currency, long amount) {
+			return null;
+		}
+		@Override
+		public void add(PersistedPaymentRequest paymentRequest) {
+		}
+		@Override
+		public void delete(PersistedPaymentRequest paymentRequest) {
+		}
+	};
+	
 	@Test
 	public void testPaymentRequestHandler_Payee_ServerRefuses() throws Exception {
 		/*
@@ -144,33 +171,7 @@ public class PaymentRequestHandlerTest {
 		UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
-		IUserPromptPaymentRequest userPrompt = new IUserPromptPaymentRequest() {
-			@Override
-			public boolean getPaymentRequestAnswer(String username, Currency currency, long amount) {
-				// accept the payment
-				return true;
-			}
-
-			@Override
-			public boolean isPaymentAccepted() {
-				// accept the payment
-				return true;
-			}
-		};
-		
-		IPersistencyHandler iph = new IPersistencyHandler() {
-			@Override
-			public PersistedPaymentRequest getPersistedPaymentRequest(String username, Currency currency, long amount) {
-				return null;
-			}
-			@Override
-			public void add(PersistedPaymentRequest paymentRequest) {
-			}
-			@Override
-			public void delete(PersistedPaymentRequest paymentRequest) {
-			}
-		};
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, userPrompt, iph);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, defaultPersistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
 		
 		// receive payment request
@@ -215,8 +216,6 @@ public class PaymentRequestHandlerTest {
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
-		Thread.sleep(Config.SERVER_RESPONSE_TIMEOUT+500);
-		
 		assertFalse(paymentForwardToServer);
 		assertNull(paymentForwardToServerObject);
 		assertFalse(paymentNoServerResponse);
@@ -233,7 +232,7 @@ public class PaymentRequestHandlerTest {
 	}
 	
 	@Test
-	public void testPaymentRequestHandler_Success() throws Exception {
+	public void testPaymentRequestHandler_Payee_Success() throws Exception {
 		/*
 		 * Simulates a successful payment
 		 */
@@ -248,33 +247,7 @@ public class PaymentRequestHandlerTest {
 		UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
-		IUserPromptPaymentRequest userPrompt = new IUserPromptPaymentRequest() {
-			@Override
-			public boolean getPaymentRequestAnswer(String username, Currency currency, long amount) {
-				// accept the payment
-				return true;
-			}
-
-			@Override
-			public boolean isPaymentAccepted() {
-				// accept the payment
-				return true;
-			}
-		};
-		
-		IPersistencyHandler iph = new IPersistencyHandler() {
-			@Override
-			public PersistedPaymentRequest getPersistedPaymentRequest(String username, Currency currency, long amount) {
-				return null;
-			}
-			@Override
-			public void add(PersistedPaymentRequest paymentRequest) {
-			}
-			@Override
-			public void delete(PersistedPaymentRequest paymentRequest) {
-			}
-		};
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, userPrompt, iph);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, defaultPersistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
 		
 		// receive payment request
@@ -317,8 +290,6 @@ public class PaymentRequestHandlerTest {
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
-		Thread.sleep(Config.SERVER_RESPONSE_TIMEOUT+500);
-		
 		assertFalse(paymentError);
 		assertNull(paymentErrorObject);
 		assertFalse(paymentForwardToServer);
@@ -337,7 +308,7 @@ public class PaymentRequestHandlerTest {
 	}
 	
 	@Test
-	public void testPaymentRequestHandler_ServerResponseTimeout() throws Exception {
+	public void testPaymentRequestHandler_Payee_ServerResponseTimeout() throws Exception {
 		/*
 		 * Simulates a server response timeout
 		 */
@@ -352,33 +323,7 @@ public class PaymentRequestHandlerTest {
 		UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
-		IUserPromptPaymentRequest userPrompt = new IUserPromptPaymentRequest() {
-			@Override
-			public boolean getPaymentRequestAnswer(String username, Currency currency, long amount) {
-				// accept the payment
-				return true;
-			}
-
-			@Override
-			public boolean isPaymentAccepted() {
-				// accept the payment
-				return true;
-			}
-		};
-		
-		IPersistencyHandler iph = new IPersistencyHandler() {
-			@Override
-			public PersistedPaymentRequest getPersistedPaymentRequest(String username, Currency currency, long amount) {
-				return null;
-			}
-			@Override
-			public void add(PersistedPaymentRequest paymentRequest) {
-			}
-			@Override
-			public void delete(PersistedPaymentRequest paymentRequest) {
-			}
-		};
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, userPrompt, iph);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, defaultPersistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
 		
 		// receive payment request
@@ -412,7 +357,7 @@ public class PaymentRequestHandlerTest {
 	}
 	
 	@Test
-	public void testPaymentRequestHandler_PersistencyHandler() throws Exception {
+	public void testPaymentRequestHandler_Payee_PersistencyHandler() throws Exception {
 		/*
 		 * Simulates a successful payment
 		 */
@@ -427,23 +372,9 @@ public class PaymentRequestHandlerTest {
 		UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
-		IUserPromptPaymentRequest userPrompt = new IUserPromptPaymentRequest() {
-			@Override
-			public boolean getPaymentRequestAnswer(String username, Currency currency, long amount) {
-				// accept the payment
-				return true;
-			}
-
-			@Override
-			public boolean isPaymentAccepted() {
-				// accept the payment
-				return true;
-			}
-		};
-		
 		PersistencyHandler iph = new PersistencyHandler();
 		
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, userPrompt, iph);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, iph);
 		MessageHandler messageHandler = prh.getMessageHandler();
 		
 		// receive payment request
@@ -489,8 +420,6 @@ public class PaymentRequestHandlerTest {
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
 		assertEquals(0, iph.getList().size());
-		
-		Thread.sleep(Config.SERVER_RESPONSE_TIMEOUT+500);
 		
 		assertFalse(paymentError);
 		assertNull(paymentErrorObject);
@@ -553,7 +482,7 @@ public class PaymentRequestHandlerTest {
 		}
 	};
 	
-	public void testPaymentRequestHandler_PayeeRemovesDevice() throws Exception {
+	public void testPaymentRequestHandler_Payee_PayeeRemovesDevice() throws Exception {
 		/*
 		 * Simulates a payment where the payer removes the device to click on
 		 * the accept button and re-establishes a nfc contact
@@ -569,23 +498,9 @@ public class PaymentRequestHandlerTest {
 		UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 
-		IUserPromptPaymentRequest userPrompt = new IUserPromptPaymentRequest() {
-			@Override
-			public boolean getPaymentRequestAnswer(String username, Currency currency, long amount) {
-				// accept the payment
-				return true;
-			}
-
-			@Override
-			public boolean isPaymentAccepted() {
-				// accept the payment
-				return true;
-			}
-		};
-
 		PersistencyHandler iph = new PersistencyHandler();
 
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, userPrompt, iph);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, iph);
 		MessageHandler messageHandler = prh.getMessageHandler();
 
 		// receive payment request
@@ -645,8 +560,6 @@ public class PaymentRequestHandlerTest {
 
 		assertEquals(0, iph.getList().size());
 		
-		Thread.sleep(Config.SERVER_RESPONSE_TIMEOUT+500);
-
 		assertFalse(paymentError);
 		assertNull(paymentErrorObject);
 		assertFalse(paymentForwardToServer);
@@ -664,6 +577,181 @@ public class PaymentRequestHandlerTest {
 		assertEquals(userInfosPayee.getUsername(), pr1.getUsernamePayee());
 	}
 	
-	//TODO: add test case for other scenario (payer intis)
+	@Test
+	public void testPaymentRequestHandler_Payer_ServerRefuses() throws Exception {
+		/*
+		 * Simulates server refuses the payment for any reason
+		 */
+		reset();
+
+		KeyPair keyPairPayer = TestUtils.generateKeyPair();
+		UserInfos userInfosPayer = new UserInfos("payer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
+		
+		KeyPair keyPairPayee = TestUtils.generateKeyPair();
+		KeyPair keyPairServer = TestUtils.generateKeyPair();
+		UserInfos userInfosPayee = new UserInfos("payee", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
+		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
+		
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayee, serverInfos, defaultUserPrompt, defaultPersistencyHandler);
+		MessageHandler messageHandler = prh.getMessageHandler();
+		
+		// receive request to send username
+		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });
+		assertTrue(pm.isPayer());
+		
+		byte[] handleMessage = messageHandler.handleMessage(pm.bytes());
+		pm = new PaymentMessage().bytes(handleMessage);
+		
+		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		
+		// receive payment response from server
+		PaymentRequest paymentRequestPayer = new PaymentRequest(userInfosPayer.getPKIAlgorithm(), userInfosPayer.getKeyNumber(), userInfosPayer.getUsername(), userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentInfos.getTimestamp());
+		paymentRequestPayer.sign(userInfosPayer.getPrivateKey());
+		ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer);
+		
+		ServerPaymentRequest decode = DecoderFactory.decode(ServerPaymentRequest.class, spr.encode());
+		PaymentRequest paymentRequestPayer2 = decode.getPaymentRequestPayer();
+		
+		String reason = "any reason";
+		PaymentResponse pr = new PaymentResponse(PKIAlgorithm.DEFAULT, 1, ServerResponseStatus.FAILURE, reason, paymentRequestPayer2.getUsernamePayer(), paymentRequestPayer2.getUsernamePayee(), paymentRequestPayer2.getCurrency(), paymentRequestPayer2.getAmount(), paymentRequestPayer2.getTimestamp());
+		pr.sign(keyPairServer.getPrivate());
+		ServerPaymentResponse spr2 = new ServerPaymentResponse(pr);
+		byte[] encode = spr2.encode();
+		
+		ServerPaymentResponse serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, encode);
+		byte[] encode2 = serverPaymentResponse.getPaymentResponsePayer().encode();
+		
+		byte[] data = new PaymentMessage().payer().payload(encode2).bytes();
+		
+		byte[] handleMessage2 = messageHandler.handleMessage(data);
+		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
+		assertEquals(PaymentMessage.DEFAULT, pm2.header());
+		assertEquals(1, pm2.payload().length);
+		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
+		
+		assertFalse(paymentForwardToServer);
+		assertNull(paymentForwardToServerObject);
+		assertFalse(paymentNoServerResponse);
+		assertNull(paymentNoServerResponseObject);
+		assertFalse(paymentSuccess);
+		assertNull(paymentSuccessObject);
+		assertFalse(paymentOtherEvent);
+		assertNull(paymentOtherEventObject);
+		
+		assertTrue(paymentError);
+		assertTrue(paymentErrorObject instanceof PaymentError);
+		PaymentError err = (PaymentError) paymentErrorObject;
+		assertEquals(PaymentError.SERVER_REFUSED.getCode(), err.getCode());
+	}
+	
+	@Test
+	public void testPaymentRequestHandler_Payer_Success() throws Exception {
+		/*
+		 * Simulates a successful payment
+		 */
+		reset();
+
+		KeyPair keyPairPayer = TestUtils.generateKeyPair();
+		UserInfos userInfosPayer = new UserInfos("payer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
+		
+		KeyPair keyPairPayee = TestUtils.generateKeyPair();
+		KeyPair keyPairServer = TestUtils.generateKeyPair();
+		UserInfos userInfosPayee = new UserInfos("payee", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
+		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
+		
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayee, serverInfos, defaultUserPrompt, defaultPersistencyHandler);
+		MessageHandler messageHandler = prh.getMessageHandler();
+		
+		// receive request to send username
+		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });
+		assertTrue(pm.isPayer());
+		
+		byte[] handleMessage = messageHandler.handleMessage(pm.bytes());
+		pm = new PaymentMessage().bytes(handleMessage);
+		
+		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		
+		// receive payment response
+		PaymentRequest paymentRequestPayer = new PaymentRequest(userInfosPayer.getPKIAlgorithm(), userInfosPayer.getKeyNumber(), userInfosPayer.getUsername(), userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentInfos.getTimestamp());
+		paymentRequestPayer.sign(userInfosPayer.getPrivateKey());
+		ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer);
+		
+		ServerPaymentRequest decode = DecoderFactory.decode(ServerPaymentRequest.class, spr.encode());
+		PaymentRequest paymentRequestPayer2 = decode.getPaymentRequestPayer();
+		
+		PaymentResponse pr = new PaymentResponse(PKIAlgorithm.DEFAULT, 1, ServerResponseStatus.SUCCESS, null, paymentRequestPayer2.getUsernamePayer(), paymentRequestPayer2.getUsernamePayee(), paymentRequestPayer2.getCurrency(), paymentRequestPayer2.getAmount(), paymentRequestPayer2.getTimestamp());
+		pr.sign(keyPairServer.getPrivate());
+		ServerPaymentResponse spr2 = new ServerPaymentResponse(pr);
+		byte[] encode = spr2.encode();
+		
+		ServerPaymentResponse serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, encode);
+		byte[] encode2 = serverPaymentResponse.getPaymentResponsePayer().encode();
+		
+		byte[] data = new PaymentMessage().payer().payload(encode2).bytes();
+		
+		byte[] handleMessage2 = messageHandler.handleMessage(data);
+		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
+		assertEquals(PaymentMessage.DEFAULT, pm2.header());
+		assertEquals(1, pm2.payload().length);
+		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
+		
+		assertFalse(paymentError);
+		assertNull(paymentErrorObject);
+		assertFalse(paymentForwardToServer);
+		assertNull(paymentForwardToServerObject);
+		assertFalse(paymentNoServerResponse);
+		assertNull(paymentNoServerResponseObject);
+		assertFalse(paymentOtherEvent);
+		assertNull(paymentOtherEventObject);
+		
+		assertTrue(paymentSuccess);
+		assertNotNull(paymentSuccessObject);
+		assertTrue(paymentSuccessObject instanceof PaymentResponse);
+		PaymentResponse pr1 = (PaymentResponse) paymentSuccessObject;
+		assertEquals(userInfosPayer.getUsername(), pr1.getUsernamePayer());
+		assertEquals(userInfosPayee.getUsername(), pr1.getUsernamePayee());
+	}
+	
+	@Test
+	public void testPaymentRequestHandler_Payer_ServerResponseTimeout() throws Exception {
+		/*
+		 * Simulates a server response timeout
+		 */
+		reset();
+
+		KeyPair keyPairPayer = TestUtils.generateKeyPair();
+		UserInfos userInfosPayer = new UserInfos("payer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
+		
+		KeyPair keyPairServer = TestUtils.generateKeyPair();
+		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
+		
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, defaultPersistencyHandler);
+		MessageHandler messageHandler = prh.getMessageHandler();
+		
+		// receive request to send username
+		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });
+		assertTrue(pm.isPayer());
+		
+		byte[] handleMessage = messageHandler.handleMessage(pm.bytes());
+		pm = new PaymentMessage().bytes(handleMessage);
+		
+		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		
+		Thread.sleep(Config.SERVER_RESPONSE_TIMEOUT+500);
+		
+		assertFalse(paymentError);
+		assertNull(paymentErrorObject);
+		assertFalse(paymentForwardToServer);
+		assertNull(paymentForwardToServerObject);
+		assertFalse(paymentOtherEvent);
+		assertNull(paymentOtherEventObject);
+		assertFalse(paymentSuccess);
+		assertNull(paymentSuccessObject);
+		
+		assertTrue(paymentNoServerResponse);
+		assertNull(paymentNoServerResponseObject);
+	}
 	
 }
