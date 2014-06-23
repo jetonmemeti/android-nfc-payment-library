@@ -300,6 +300,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					break;
 				}
 				
+				//TODO: forward only the signature by nfc? build the object on its one and verify signature?
 				byte[] encode = toForward.encode();
 				Log.d(TAG, "DBG2: "+Arrays.toString(encode)+ "//"+serverInfos.getPublicKey());
 				
