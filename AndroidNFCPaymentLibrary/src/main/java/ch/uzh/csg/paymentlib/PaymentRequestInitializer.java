@@ -124,8 +124,13 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	/*
 	 * only for test purposes
 	 */
-	protected NfcEvent getNfcEventHandlerRequest() {
-		return nfcEventHandlerRequest;
+	protected NfcEvent getNfcEventHandler() {
+		if (paymentType == PaymentType.REQUEST_PAYMENT)
+			return nfcEventHandlerRequest;
+		else if (paymentType == PaymentType.SEND_PAYMENT)
+			return nfcEventHandlerSend;
+		else
+			return null;
 	}
 	
 	private NfcEvent nfcEventHandlerRequest = new NfcEvent() {
