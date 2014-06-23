@@ -515,6 +515,9 @@ public class PaymentRequestInitializerTest {
 		verify(transceiver, times(2)).transceive(any(byte[].class));
 		verify(transceiver).disable(any(Activity.class));
 		
+		//assure that the timeout is not thrown
+		Thread.sleep(Config.SERVER_CALL_TIMEOUT+500);
+		
 		assertFalse(paymentServerResponseTimeout);
 		assertNull(paymentServerResponseTimeoutObject);
 		assertFalse(paymentError);
@@ -801,6 +804,9 @@ public class PaymentRequestInitializerTest {
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
 		verify(transceiver).disable(any(Activity.class));
+		
+		//assure that the timeout is not thrown
+		Thread.sleep(Config.SERVER_CALL_TIMEOUT+500);
 		
 		assertFalse(paymentServerResponseTimeout);
 		assertNull(paymentServerResponseTimeoutObject);
