@@ -1,8 +1,10 @@
 android-nfc-payment-library
 ===========================
 
-This is an Android library designed for two-way NFC payments whith Android KitKat devices and the <a href="http://www.acs.com.hk/en/products/3/acr122u-usb-nfc-reader/">ACR122u USB NFC Reader</a>.<br>
-This library requires that you have successfully installed the <a href="https://github.com/jetonmemeti/android-kitkat-nfc-library">AndroidKitKatNFCLibrary</a>.
+This is an Android library designed for two-way NFC payments whith Android KitKat devices and the <a href="http://www.acs.com.hk/en/products/3/acr122u-usb-nfc-reader/">ACR122u USB NFC Reader</a>.
+
+
+This library requires that you have successfully installed the <a href="https://github.com/jetonmemeti/android-kitkat-nfc-library">AndroidKitKatNFCLibrary</a> as well as the <a href="https://github.com/jetonmemeti/custom-serialization">custom-serialization</a> library.
 
 Prerequisites:
 --------------
