@@ -4,47 +4,67 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ch.uzh.csg</groupId>
 	<artifactId>nfcpaymentlib</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<packaging>apk</packaging>
+	<version>0.0.3</version>
+	<packaging>jar</packaging>
 	<name>AndroidNFCPaymentLibrary</name>
 
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<platform.version>4.0.1.2</platform.version>
-		<android.plugin.version>3.7.0</android.plugin.version>
-	</properties>
-	
 	<dependencies>
+	    <!-- This is used to access Android Resources (such as the HCE and IsoDep) from a Java Pro \ 
+	    	install with https://github.com/mosabua/maven-android-sdk-deployer -->
+	    <dependency>
+  			<groupId>android</groupId>
+  			<artifactId>android</artifactId>
+  			<version>4.4.2_r3</version>
+  			<scope>provided</scope>
+		</dependency>
+	    
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Power Mock -->
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-module-junit4</artifactId>
+			<version>1.5.5</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-api-mockito</artifactId>
+			<version>1.5.5</version>
+			<scope>test</scope>
+		</dependency>
+	    
 	    <!-- Custom Serialization Library -->
 	    <dependency>
 			<groupId>ch.uzh.csg</groupId>
 			<artifactId>custom-serialization</artifactId>
 			<version>0.1.3</version>
 	    </dependency>
+	    
+	    <dependency>
+			<groupId>ch.uzh.csg</groupId>
+			<artifactId>nfclib</artifactId>
+			<version>0.0.3</version>
+	    </dependency>
 	</dependencies>
-
+	
 	<build>
-		<finalName>${project.artifactId}</finalName>
-		<pluginManagement>
-			<plugins>
-				<plugin>
-					<groupId>com.jayway.maven.plugins.android.generation2</groupId>
-					<artifactId>android-maven-plugin</artifactId>
-					<version>${android.plugin.version}</version>
-					<extensions>true</extensions>
-				</plugin>
-			</plugins>
-		</pluginManagement>
 		<plugins>
 			<plugin>
-				<groupId>com.jayway.maven.plugins.android.generation2</groupId>
-				<artifactId>android-maven-plugin</artifactId>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
 				<configuration>
-					<sdk>
-						<platform>19</platform>
-					</sdk>
+					<source>1.7</source>
+					<target>1.7</target>
 				</configuration>
 			</plugin>
 		</plugins>
 	</build>
+	
 </project>

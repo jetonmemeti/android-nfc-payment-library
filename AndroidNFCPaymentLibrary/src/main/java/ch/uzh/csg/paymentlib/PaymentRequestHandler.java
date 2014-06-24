@@ -1,14 +1,18 @@
 package ch.uzh.csg.paymentlib;
 
+import java.nio.charset.Charset;
+import java.util.Arrays;
+
 import android.app.Activity;
+import android.util.Log;
 import ch.uzh.csg.mbps.customserialization.DecoderFactory;
 import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.nfclib.CustomHostApduService;
+import ch.uzh.csg.nfclib.CustomHostApduService2;
 import ch.uzh.csg.nfclib.IMessageHandler;
 import ch.uzh.csg.nfclib.NfcEvent;
-import ch.uzh.csg.nfclib.NfcEventHandler;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
@@ -21,9 +25,11 @@ import ch.uzh.csg.paymentlib.util.Config;
 //TODO: javadoc
 public class PaymentRequestHandler {
 	
+	public static final String TAG = "##NFC## PaymentRequestHandler";
+	
 	public static final byte[] ACK = new byte[] { (byte) 0xAC };
 	
-	private PaymentEventHandler paymentEventHandler;
+	private IPaymentEventHandler paymentEventHandler;
 	private UserInfos userInfos;
 	private ServerInfos serverInfos;
 	private IUserPromptPaymentRequest userPrompt;
@@ -33,7 +39,7 @@ public class PaymentRequestHandler {
 	private int nofMessages = 0;
 	private boolean aborted = false;
 	
-	public PaymentRequestHandler(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
+	public PaymentRequestHandler(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
 		checkParameters(activity, paymentEventHandler, userInfos, serverInfos, userPrompt, persistencyHandler);
 		
 		this.paymentEventHandler = paymentEventHandler;
@@ -43,10 +49,11 @@ public class PaymentRequestHandler {
 		this.persistencyHandler = persistencyHandler;
 		this.messageHandler = new MessageHandler();
 		
-		CustomHostApduService.init(activity, nfcEventHandler, messageHandler);
+		CustomHostApduService c = new CustomHostApduService(activity, nfcEventHandler, messageHandler);
+		CustomHostApduService2.init(c);
 	}
 	
-	private void checkParameters(Activity activity, PaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
+	private void checkParameters(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
 		if (activity == null)
 			throw new IllegalArgumentException("The activity cannot be null.");
 		
@@ -66,10 +73,10 @@ public class PaymentRequestHandler {
 			throw new IllegalArgumentException("The persistency handler cannot be null.");
 	}
 	
-	private NfcEventHandler nfcEventHandler = new NfcEventHandler() {
+	private NfcEvent nfcEventHandler = new NfcEvent() {
 		
 		@Override
-		public void handleMessage(NfcEvent event, Object object) {
+		public void handleMessage(Type event, Object object) {
 			if (aborted)
 				return;
 			
@@ -86,7 +93,7 @@ public class PaymentRequestHandler {
 				break;
 			case MESSAGE_RECEIVED: //do nothing, handle in IMessageHandler
 				break;
-			case MESSAGE_RETURNED: //do nothing
+			case MESSAGE_SENT_HCE: //do nothing
 				break;
 			case MESSAGE_SENT:// do nothing, concerns only the NfcTransceiver
 				break;
@@ -97,14 +104,10 @@ public class PaymentRequestHandler {
 		
 	};
 	
-	protected NfcEventHandler getNfcEventHandler() {
-		return nfcEventHandler;
-	}
-	
 	private byte[] getError(PaymentError err) {
 		aborted = true;
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
-		return new PaymentMessage(PaymentMessage.ERROR, new byte[] { err.getCode() }).getData();
+		return new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes();
 	}
 	
 	/*
@@ -114,6 +117,13 @@ public class PaymentRequestHandler {
 		return new MessageHandler();
 	}
 	
+	/*
+	 * only for test purposes
+	 */
+	protected NfcEvent getNfcEventHandler() {
+		return nfcEventHandler;
+	}
+	
 	protected class MessageHandler implements IMessageHandler {
 		
 		private PersistedPaymentRequest persistedPaymentRequest;
@@ -121,28 +131,68 @@ public class PaymentRequestHandler {
 
 
 		public byte[] handleMessage(byte[] message) {
+			Log.d(TAG, "got payment message: "+Arrays.toString(message));
 			if (aborted)
 				return null;
 			
 			nofMessages++;
-			PaymentMessage pm = new PaymentMessage(message);
+			PaymentMessage pm = new PaymentMessage().bytes(message);
 			if (pm.isError()) {
 				try {
-					PaymentError paymentError = PaymentError.getPaymentError(pm.getPayload()[0]);
+					PaymentError paymentError = PaymentError.getPaymentError(pm.payload()[0]);
 					return getError(paymentError);
 				} catch (Exception e) {
+					Log.d(TAG, "exception", e);
 					return getError(PaymentError.UNEXPECTED_ERROR);
 				}
 			}
 			
-			if (pm.isBuyer()) {
-				//TODO: implement
-				
+			if (pm.isPayer()) {
+				switch (nofMessages) {
+				case 1:
+					byte[] bytes = userInfos.getUsername().getBytes(Charset.forName("UTF-8"));
+					
+					Thread t = new Thread(new TimeoutHandler());
+					t.start();
+					
+					return new PaymentMessage().payee().payload(bytes).bytes();
+				case 2:
+					serverResponseArrived = true;
+					
+					try {
+						Log.d(TAG, "DBG1: "+Arrays.toString(pm.payload()));
+						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, pm.payload());
+						boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
+						if (!signatureValid) {
+							Log.d(TAG, "exception sig not valid " + serverInfos.getPublicKey());
+							return getError(PaymentError.UNEXPECTED_ERROR);
+						} else {
+							persistencyHandler.delete(persistedPaymentRequest);
+							
+							switch (paymentResponse.getStatus()) {
+							case FAILURE:
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED);
+								break;
+							case SUCCESS:
+								paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse);
+								break;
+							case DUPLICATE_REQUEST:
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST);
+								break;
+							}
+							
+							return new PaymentMessage().payload(ACK).bytes();
+						}
+					} catch (Exception e) {
+						Log.d(TAG, "exception", e);
+						return getError(PaymentError.UNEXPECTED_ERROR);
+					}
+				}
 			} else {
 				switch (nofMessages) {
 				case 1:
 					try {
-						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.getPayload());
+						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
 						
 						boolean paymentAccepted;
 						
@@ -169,6 +219,7 @@ public class PaymentRequestHandler {
 						}
 						
 						if (paymentAccepted) {
+							//response 1st message
 							PaymentRequest pr = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
 							pr.sign(userInfos.getPrivateKey());
 							byte[] encoded = pr.encode();
@@ -177,20 +228,23 @@ public class PaymentRequestHandler {
 							t.start();
 							
 							persistencyHandler.add(persistedPaymentRequest);
-							return new PaymentMessage(PaymentMessage.DEFAULT, encoded).getData();
+							return new PaymentMessage().payload(encoded).bytes();
 						} else {
 							return getError(PaymentError.PAYER_REFUSED);
 						}
 					} catch (Exception e) {
+						Log.d(TAG, "exception", e);
 						return getError(PaymentError.UNEXPECTED_ERROR);
 					}
 				case 2:
 					serverResponseArrived = true;
 					
 					try {
-						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, message);
+						Log.d(TAG, "DBG1: "+Arrays.toString(pm.payload()));
+						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 						boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
 						if (!signatureValid) {
+							Log.d(TAG, "exception sig not valid " + serverInfos.getPublicKey());
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
 							persistencyHandler.delete(persistedPaymentRequest);
@@ -207,14 +261,15 @@ public class PaymentRequestHandler {
 								break;
 							}
 							
-							return new PaymentMessage(PaymentMessage.DEFAULT, ACK).getData();
+							return new PaymentMessage().payload(ACK).bytes();
 						}
 					} catch (Exception e) {
+						Log.d(TAG, "exception", e);
 						return getError(PaymentError.UNEXPECTED_ERROR);
 					}
 				}
 			}
-
+			Log.d(TAG, "exception generic");
 			return getError(PaymentError.UNEXPECTED_ERROR);
 		}
 		
