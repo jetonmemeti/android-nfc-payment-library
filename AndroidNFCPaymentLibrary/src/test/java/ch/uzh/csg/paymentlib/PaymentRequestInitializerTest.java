@@ -195,7 +195,6 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -266,7 +265,6 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -287,7 +285,6 @@ public class PaymentRequestInitializerTest {
 		}).doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -360,7 +357,6 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -381,7 +377,6 @@ public class PaymentRequestInitializerTest {
 		}).doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -458,7 +453,6 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -479,7 +473,6 @@ public class PaymentRequestInitializerTest {
 		}).doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -560,7 +553,6 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -581,7 +573,6 @@ public class PaymentRequestInitializerTest {
 		}).doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -655,7 +646,6 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -673,7 +663,6 @@ public class PaymentRequestInitializerTest {
 		}).doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -750,7 +739,6 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -768,7 +756,6 @@ public class PaymentRequestInitializerTest {
 		}).doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -850,7 +837,6 @@ public class PaymentRequestInitializerTest {
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				
@@ -868,7 +854,6 @@ public class PaymentRequestInitializerTest {
 		}).doAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				pri.getNfcEventHandler().handleMessage(Type.MESSAGE_SENT, null);
 				
 				Object[] arguments = invocation.getArguments();
 				

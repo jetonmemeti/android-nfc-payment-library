@@ -197,11 +197,6 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case CONNECTION_LOST:
 				nofMessages = 0;
 				break;
-			case MESSAGE_SENT_HCE: // do nothing, concerns only the HCE
-				break;
-			case MESSAGE_SENT:
-				nofMessages++;
-				break;
 			case INITIALIZED:
 				try {
 					InitMessagePayee initMessage = new InitMessagePayee(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -211,6 +206,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				}
 				break;
 			case MESSAGE_RECEIVED:
+				nofMessages++;
 				if (object == null || !(object instanceof byte[])) {
 					sendError(PaymentError.UNEXPECTED_ERROR);
 					break;
@@ -257,7 +253,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					if (timeoutHandler != null && !timeoutHandler.isInterrupted())
 						 timeoutHandler.interrupt();
 					
-					nfcTransceiver.disable(activity);
+					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, null);
+					
+//					nfcTransceiver.disable(activity);
 					break;
 				}
 				break;
@@ -377,15 +375,10 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case FATAL_ERROR:
 				aborted = true;
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
-				nfcTransceiver.disable(activity);
+				//nfcTransceiver.disable(activity);
 				break;
 			case CONNECTION_LOST:
 				nofMessages = 0;
-				break;
-			case MESSAGE_SENT_HCE: // do nothing, concerns only the HCE
-				break;
-			case MESSAGE_SENT:
-				nofMessages++;
 				break;
 			case INITIALIZED:
 				try {
@@ -396,6 +389,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				}
 				break;
 			case MESSAGE_RECEIVED:
+				nofMessages++;
 				if (object == null || !(object instanceof byte[])) {
 					sendError(PaymentError.UNEXPECTED_ERROR);
 					break;
@@ -412,7 +406,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					}
 					
 					paymentEventHandler.handleMessage(PaymentEvent.ERROR, paymentError);
-					nfcTransceiver.disable(activity);
+					//nfcTransceiver.disable(activity);
 					break;
 				}
 				
@@ -439,7 +433,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					if (timeoutHandler != null && !timeoutHandler.isInterrupted())
 						timeoutHandler.interrupt();
 					
-					nfcTransceiver.disable(activity);
+					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, object);
+					
+					//nfcTransceiver.disable(activity);
 					break;
 				}
 				break;

@@ -4,13 +4,22 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ch.uzh.csg</groupId>
 	<artifactId>nfcpaymentlib</artifactId>
-	<version>0.0.3</version>
+	<version>0.0.4</version>
 	<packaging>jar</packaging>
 	<name>AndroidNFCPaymentLibrary</name>
 
 	<dependencies>
+	    
+	    <dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+	    
 	    <!-- This is used to access Android Resources (such as the HCE and IsoDep) from a Java Pro \ 
 	    	install with https://github.com/mosabua/maven-android-sdk-deployer -->
+	    	
 	    <dependency>
   			<groupId>android</groupId>
   			<artifactId>android</artifactId>
@@ -18,12 +27,7 @@
   			<scope>provided</scope>
 		</dependency>
 	    
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.11</version>
-			<scope>test</scope>
-		</dependency>
+		
 
 		<!-- Power Mock -->
 		<dependency>
@@ -49,7 +53,7 @@
 	    <dependency>
 			<groupId>ch.uzh.csg</groupId>
 			<artifactId>nfclib</artifactId>
-			<version>0.0.3</version>
+			<version>0.0.4</version>
 	    </dependency>
 	</dependencies>
 	

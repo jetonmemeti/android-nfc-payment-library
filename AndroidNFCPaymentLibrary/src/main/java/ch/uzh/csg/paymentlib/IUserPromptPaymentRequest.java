@@ -23,7 +23,7 @@ public interface IUserPromptPaymentRequest {
 	 *            the payment amount in the given currency
 	 * @return true if the user accepts, false if he rejects
 	 */
-	public boolean promptUserPaymentRequest(String username, Currency currency, long amount);
+	public void promptUserPaymentRequest(String username, Currency currency, long amount, Answer answer);
 	
 	/**
 	 * Returns the application user's decision which has been asked already

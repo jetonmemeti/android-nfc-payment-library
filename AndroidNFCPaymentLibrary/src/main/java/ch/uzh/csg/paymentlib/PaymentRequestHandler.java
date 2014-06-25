@@ -9,10 +9,11 @@ import ch.uzh.csg.mbps.customserialization.DecoderFactory;
 import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
-import ch.uzh.csg.nfclib.CustomHostApduService;
 import ch.uzh.csg.nfclib.CustomHostApduService2;
 import ch.uzh.csg.nfclib.IMessageHandler;
 import ch.uzh.csg.nfclib.NfcEvent;
+import ch.uzh.csg.nfclib.NfcResponder;
+import ch.uzh.csg.nfclib.SendLater;
 import ch.uzh.csg.paymentlib.PaymentRequestInitializer.PaymentType;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
@@ -89,7 +90,7 @@ public class PaymentRequestHandler {
 		this.persistencyHandler = persistencyHandler;
 		this.messageHandler = new MessageHandler();
 		
-		CustomHostApduService c = new CustomHostApduService(activity, nfcEventHandler, messageHandler);
+		NfcResponder c = new NfcResponder(activity, nfcEventHandler, messageHandler);
 		CustomHostApduService2.init(c);
 	}
 	
@@ -133,10 +134,6 @@ public class PaymentRequestHandler {
 				break;
 			case MESSAGE_RECEIVED: //do nothing, handle in IMessageHandler
 				break;
-			case MESSAGE_SENT_HCE: //do nothing
-				break;
-			case MESSAGE_SENT:// do nothing, concerns only the NfcTransceiver
-				break;
 			default:
 				break;
 			}
@@ -170,7 +167,7 @@ public class PaymentRequestHandler {
 		private volatile boolean serverResponseArrived = false;
 
 
-		public byte[] handleMessage(byte[] message) {
+		public byte[] handleMessage(byte[] message, final SendLater sendLater) {
 			Log.d(TAG, "got payment message: "+Arrays.toString(message));
 			if (aborted)
 				return null;
@@ -232,7 +229,7 @@ public class PaymentRequestHandler {
 				switch (nofMessages) {
 				case 1:
 					try {
-						InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
+						final InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
 						
 						boolean paymentAccepted;
 						
@@ -255,23 +252,36 @@ public class PaymentRequestHandler {
 								persistedPaymentRequest = new PersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
 							}
 							
-							paymentAccepted = userPrompt.promptUserPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
+							userPrompt.promptUserPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), new Answer() {
+								
+								@Override
+								public void success() {
+									try {
+									//response 1st message
+									PaymentRequest pr = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
+									pr.sign(userInfos.getPrivateKey());
+									byte[] encoded = pr.encode();
+									
+									Thread t = new Thread(new TimeoutHandler());
+									t.start();
+									
+									persistencyHandler.add(persistedPaymentRequest);
+									sendLater.sendLater(new PaymentMessage().payload(encoded).bytes());
+									} catch (Exception e) {
+										sendLater.sendLater(getError(PaymentError.UNEXPECTED_ERROR));
+									}
+									
+								}
+								
+								@Override
+								public void failed() {
+									sendLater.sendLater(getError(PaymentError.PAYER_REFUSED));
+									
+								}
+							});
 						}
 						
-						if (paymentAccepted) {
-							//response 1st message
-							PaymentRequest pr = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
-							pr.sign(userInfos.getPrivateKey());
-							byte[] encoded = pr.encode();
-							
-							Thread t = new Thread(new TimeoutHandler());
-							t.start();
-							
-							persistencyHandler.add(persistedPaymentRequest);
-							return new PaymentMessage().payload(encoded).bytes();
-						} else {
-							return getError(PaymentError.PAYER_REFUSED);
-						}
+						return null;
 					} catch (Exception e) {
 						Log.d(TAG, "exception", e);
 						return getError(PaymentError.UNEXPECTED_ERROR);
