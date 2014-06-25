@@ -5,7 +5,15 @@ import java.util.Map;
 
 import ch.uzh.csg.paymentlib.exceptions.UnknownPaymentErrorException;
 
-//TODO: javadoc
+/**
+ * This class contains all errors which might occur during a payment. If a
+ * {@link PaymentMessage} contains the ERROR flag in the header, then the
+ * payload is set to one of the codes below to provide more information why a
+ * payment was not successful.
+ * 
+ * @author Jeton Memeti
+ * 
+ */
 public enum PaymentError {
 	PAYER_REFUSED((byte) 0x01),
 	SERVER_REFUSED((byte) 0x02),
@@ -20,6 +28,9 @@ public enum PaymentError {
 		this.code = code;
 	}
 	
+	/**
+	 * Returns the code of the given error.
+	 */
 	public byte getCode() {
 		return code;
 	}
@@ -27,7 +38,7 @@ public enum PaymentError {
 	private static Map<Byte, PaymentError> codeErrorMap = null;
 	
 	/**
-	 * Returns the PaymentError on the code.
+	 * Returns the PaymentError from the code.
 	 * 
 	 * @param b
 	 *            the code

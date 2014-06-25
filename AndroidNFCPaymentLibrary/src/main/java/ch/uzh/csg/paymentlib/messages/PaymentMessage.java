@@ -1,6 +1,18 @@
 package ch.uzh.csg.paymentlib.messages;
 
-//TODO: javadoc
+/**
+ * This class represents a protocol message. This and only this message is send
+ * between the two devices in order to accomplish a payment.
+ * 
+ * The message consists of a header containing a flag and the arbitrary long
+ * payload.
+ * 
+ * If the header is set to ERROR, then the payload contains a code corresponding
+ * to an {@link PaymentError}.
+ * 
+ * @author Jeton Memeti
+ * 
+ */
 public class PaymentMessage {
 
 	public static final int HEADER_LENGTH = 1;
@@ -13,33 +25,71 @@ public class PaymentMessage {
 	private byte[] payload = new byte[0];
 	private int header = DEFAULT;
 	
+	/**
+	 * Sets the header of this message to error (other flags are preserved!).
+	 * 
+	 * @return this object with the new flag
+	 */
 	public PaymentMessage error() {
 		header = header | ERROR;
 		return this;
 	}
 	
+	/**
+	 * Returns if the flag in the header is ERROR. This means that an error has
+	 * occured and the communication can be aborted.
+	 */
 	public boolean isError() {
 		return (header & ERROR) == ERROR;
 	}
 	
+	/**
+	 * Sets the header of this message to payer (other flags are preserved!). If
+	 * the payee flag is set, it will be ovwrwritten. This has to be used only
+	 * if the payer is sending this message to the payee.
+	 * 
+	 * @return this object with the new flag
+	 */
 	public PaymentMessage payer() {
 		header = header | PAYER;
 		return this;
 	}
 	
+	/**
+	 * Returns it the flag in the header is PAYER, this means if the payer has
+	 * sent this message.
+	 */
 	public boolean isPayer() {
 		return (header & PAYER) == PAYER;
 	}
 	
+	/**
+	 * Sets the header of this message to payee (other flags are preserved!). If
+	 * the payer flag is set, it will be overwritten. This has to be used only
+	 * if the payee is sending this message to the payer.
+	 * 
+	 * @return this object with the new flag
+	 */
 	public PaymentMessage payee() {
 		header = header & ~PAYER;
 		return this;
 	}
 	
+	/**
+	 * Returns it the flag in the header is PAYEE, this means if the payee has
+	 * sent this message.
+	 */
 	public boolean isPayee() {
 		return (header & PAYER) != PAYER;
 	}
 
+	/**
+	 * Sets the payload of this message. The header flags are preserved.
+	 * 
+	 * @param payload
+	 *            to be set
+	 * @return this object with the new payload
+	 */
 	public PaymentMessage payload(byte[] payload) {
 		if (payload == null || payload.length == 0)
 			throw new IllegalArgumentException("payload cannot be null or empty");
@@ -48,15 +98,23 @@ public class PaymentMessage {
 		return this;
 	}
 
+	/**
+	 * Returns the payload of this message.
+	 */
 	public byte[] payload() {
 		return payload;
 	}
 	
+	/**
+	 * Returns the header of this message.
+	 */
 	public byte header() {
 		return (byte) header;
 	}
 	
-	// serialization
+	/**
+	 * Serializes this message and returns the byte array.
+	 */
 	public byte[] bytes() {
 		final int len = payload.length;
 		byte[] output = new byte[HEADER_LENGTH + len];
@@ -65,6 +123,17 @@ public class PaymentMessage {
 		return output;
 	}
 
+	/**
+	 * Instantiates a new message from the input. Input must contain a valid
+	 * header as well as an optional payload.
+	 * 
+	 * If this message is not empty (e.g., edited before) an
+	 * IllegalArgumentException is thrown. Instantiate a new object before
+	 * calling this method.
+	 * 
+	 * @param input
+	 *            the serialized data to be deserialized into a payment message
+	 */
 	public PaymentMessage bytes(byte[] input) {
 		final int len = input.length;
 		if (!isEmpty())
