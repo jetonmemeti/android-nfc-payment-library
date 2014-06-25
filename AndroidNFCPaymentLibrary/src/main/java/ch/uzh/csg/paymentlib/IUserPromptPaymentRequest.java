@@ -2,13 +2,36 @@ package ch.uzh.csg.paymentlib;
 
 import ch.uzh.csg.mbps.customserialization.Currency;
 
-//TODO: javadoc
+/**
+ * The user of this interface can check if the application user accepted or
+ * rejected a payment request (by clicking the appropriate button on the UI).
+ * 
+ * @author Jeton Memeti
+ * 
+ */
 public interface IUserPromptPaymentRequest {
 
-	public boolean getPaymentRequestAnswer(String username, Currency currency, long amount);
+	/**
+	 * Returns the application user's decision if he wants to accept or reject
+	 * the payment with the given parameters.
+	 * 
+	 * @param username
+	 *            the payee's username
+	 * @param currency
+	 *            the payment {@link Currency}
+	 * @param amount
+	 *            the payment amount in the given currency
+	 * @return true if the user accepts, false if he rejects
+	 */
+	public boolean promptUserPaymentRequest(String username, Currency currency, long amount);
 	
-	//blocking! avoid long calculations
+	/**
+	 * Returns the application user's decision which has been asked already
+	 * before (see getPaymentRequestAnswer). This avoids prompting the user
+	 * again (e.g., with a dialog) and returns the already entered decision.
+	 * 
+	 * @return true if the user accepted the payment, false otherwise
+	 */
 	public boolean isPaymentAccepted();
-	
 	
 }

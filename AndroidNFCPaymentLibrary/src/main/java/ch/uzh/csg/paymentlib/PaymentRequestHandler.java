@@ -13,6 +13,7 @@ import ch.uzh.csg.nfclib.CustomHostApduService;
 import ch.uzh.csg.nfclib.CustomHostApduService2;
 import ch.uzh.csg.nfclib.IMessageHandler;
 import ch.uzh.csg.nfclib.NfcEvent;
+import ch.uzh.csg.paymentlib.PaymentRequestInitializer.PaymentType;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
@@ -22,11 +23,28 @@ import ch.uzh.csg.paymentlib.persistency.IPersistencyHandler;
 import ch.uzh.csg.paymentlib.persistency.PersistedPaymentRequest;
 import ch.uzh.csg.paymentlib.util.Config;
 
-//TODO: javadoc
+/**
+ * This class is the counterpart of {@link PaymentRequestInitializer} and
+ * handles a payment request comming from another NFC device.
+ * 
+ * This class handles the underlying NFC and the messages which need to be
+ * processed and returned.
+ * 
+ * If the server response is not returned within a given threshold (see
+ * {@link Config}) then the {@link PaymentEvent}.NO_SERVER_RESPONSE is fired.
+ * All other events from {@link PaymentEvent} are also fired appropriately
+ * during the communication.
+ * 
+ * @author Jeton Memeti
+ * 
+ */
 public class PaymentRequestHandler {
 	
 	public static final String TAG = "##NFC## PaymentRequestHandler";
 	
+	/**
+	 * The ack message to be returned if the payment finished successfully.
+	 */
 	public static final byte[] ACK = new byte[] { (byte) 0xAC };
 	
 	private IPaymentEventHandler paymentEventHandler;
@@ -39,6 +57,28 @@ public class PaymentRequestHandler {
 	private int nofMessages = 0;
 	private boolean aborted = false;
 	
+	/**
+	 * Instantiates a new payment request handler, which handles incoming
+	 * payment requests (irrespective of the {@link PaymentType}).
+	 * 
+	 * @param activity
+	 *            the current application's activity, needed to hook the NFC
+	 * @param paymentEventHandler
+	 *            the event handler, which will be notified on any
+	 *            {@link PaymentEvent}
+	 * @param userInfos
+	 *            the user information of the current user
+	 * @param serverInfos
+	 *            the server information
+	 * @param userPrompt
+	 *            the object responsible for prompting the user if he accepts or
+	 *            rejects the payment and returning the answer
+	 * @param persistencyHandler
+	 *            the object responsible for writing
+	 *            {@link PersistedPaymentRequest} to the device's local storage
+	 * @throws IllegalArgumentException
+	 *             if any paramter is not valid (e.g., null)
+	 */
 	public PaymentRequestHandler(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
 		checkParameters(activity, paymentEventHandler, userInfos, serverInfos, userPrompt, persistencyHandler);
 		
@@ -215,7 +255,7 @@ public class PaymentRequestHandler {
 								persistedPaymentRequest = new PersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
 							}
 							
-							paymentAccepted = userPrompt.getPaymentRequestAnswer(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
+							paymentAccepted = userPrompt.promptUserPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
 						}
 						
 						if (paymentAccepted) {

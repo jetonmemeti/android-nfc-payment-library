@@ -130,7 +130,7 @@ public class PaymentRequestHandlerTest {
 	
 	private IUserPromptPaymentRequest defaultUserPrompt = new IUserPromptPaymentRequest() {
 		@Override
-		public boolean getPaymentRequestAnswer(String username, Currency currency, long amount) {
+		public boolean promptUserPaymentRequest(String username, Currency currency, long amount) {
 			// accept the payment
 			return true;
 		}

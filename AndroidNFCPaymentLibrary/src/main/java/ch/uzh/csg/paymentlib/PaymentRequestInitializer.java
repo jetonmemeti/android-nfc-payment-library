@@ -23,14 +23,30 @@ import ch.uzh.csg.paymentlib.messages.PaymentError;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
 import ch.uzh.csg.paymentlib.util.Config;
 
-//TODO: javadoc
+/**
+ * This class is responsible for initializing payment requests. Based on the
+ * provided {@link PaymentType}, the payee or the payer initializes the payment
+ * which results in a slightly different protocol.
+ * 
+ * This class handles the underlying NFC and the messages which need to be sent.
+ * 
+ * If the server response is not returned within a given threshold (see
+ * {@link Config}) then the {@link PaymentEvent}.NO_SERVER_RESPONSE is fired.
+ * All other events from {@link PaymentEvent} are also fired appropriately
+ * during the communication.
+ * 
+ * @author Jeton Memeti
+ * 
+ */
 public class PaymentRequestInitializer implements IServerResponseListener {
 	
 	public static final String TAG = "##NFC## PaymentRequestInitializer";
 	
-	/*
-	 * seller/payee inits the payment --> type: request_payment
-	 * buyer/payer inits the payment --> type : send_payment
+	/**
+	 * Defines a Payment type. If the payee (or seller) initiates a payment
+	 * request, the type REQUEST_PAYMENT has to be chosen. If the payer (or
+	 * buyer) initiates the payment request, the type SEND_PAYMENT has to be
+	 * chosen.
 	 */
 	public enum PaymentType {
 		REQUEST_PAYMENT,
@@ -54,6 +70,29 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	private Thread timeoutHandler;
 	private volatile boolean serverResponseArrived = false;
 	
+	/**
+	 * Instantiates a new Payment Request Initializer in order to conduct a
+	 * payment with another device over NFC.
+	 * 
+	 * @param activity
+	 *            the current application's activity, needed to hook the NFC
+	 * @param paymentEventHandler
+	 *            the event handler, which will be notified on any
+	 *            {@link PaymentEvent}
+	 * @param userInfos
+	 *            the user information of the user initiating the payment
+	 *            request
+	 * @param paymentInfos
+	 *            the specific payment information
+	 * @param serverInfos
+	 *            the server information
+	 * @param type
+	 *            the {@link PaymentType}
+	 * @throws IllegalArgumentException
+	 *             if any parameter is not valid (e.g., null)
+	 * @throws NfcLibException
+	 *             if the underlying NFC feature cannot be used for any reason
+	 */
 	public PaymentRequestInitializer(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException,  NfcLibException {
 		this(activity, null, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
 	}
@@ -107,8 +146,6 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			this.nfcTransceiver = nfcTransceiver;
 		} else {
 			this.nfcTransceiver = new NfcTransceiver(nfcEventHandler, activity, userInfos.getUserId());
-			
-			
 			
 			Log.d(TAG, "init and enable transceiver");
 			this.nfcTransceiver.enable(activity);

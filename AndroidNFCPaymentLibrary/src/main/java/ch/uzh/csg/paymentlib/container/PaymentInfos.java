@@ -1,20 +1,48 @@
 package ch.uzh.csg.paymentlib.container;
 
 import ch.uzh.csg.mbps.customserialization.Currency;
+import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 
-//TODO: javadoc
+/**
+ * This class contains the payment information for a {@link PaymentRequest}.
+ * 
+ * @author Jeton Memeti
+ * 
+ */
 public class PaymentInfos {
 	
 	private Currency currency;
 	private long amount;
 	private long timestamp;
 	
-	//sets timestamp to system.currenttimemillis()
+	/**
+	 * Instantiates a new object. Sets the timestamp to the current time.
+	 * 
+	 * @param currency
+	 *            the {@link Currency} of the payment
+	 * @param amount
+	 *            the amount of the payment in the indicated {@link Currency}
+	 * @throws IllegalArgumentException
+	 *             if any parameter is not valid (e.g., null or negative)
+	 */
 	public PaymentInfos(Currency currency, long amount) throws IllegalArgumentException {
 		this(currency, amount, System.currentTimeMillis());
 	}
 	
+	/**
+	 * Instantiates a new object.
+	 * 
+	 * @param currency
+	 *            the {@link Currency} of the payment
+	 * @param amount
+	 *            the amount of the payment in the indicated {@link Currency}
+	 * @param timestamp
+	 *            the timestamp of the payment request (needed to avoid
+	 *            double-spending on the server)
+	 * @throws IllegalArgumentException
+	 *             if any parameter is not valid (e.g., null or negative)
+	 */
 	public PaymentInfos(Currency currency, long amount, long timestamp) throws IllegalArgumentException {
 		checkParams(currency, amount, timestamp);
 		
@@ -34,14 +62,23 @@ public class PaymentInfos {
 			throw new IllegalArgumentException("The timestamp must be greatern than 0.");
 	}
 	
+	/**
+	 * Returns the currency.
+	 */
 	public Currency getCurrency() {
 		return currency;
 	}
-	
+
+	/**
+	 * Returns the amount.
+	 */
 	public long getAmount() {
 		return amount;
 	}
-	
+
+	/**
+	 * Returs the timestamp.
+	 */
 	public long getTimestamp() {
 		return timestamp;
 	}
