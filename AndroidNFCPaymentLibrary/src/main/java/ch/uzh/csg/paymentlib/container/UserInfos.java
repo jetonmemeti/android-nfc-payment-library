@@ -60,7 +60,6 @@ public class UserInfos {
 			throw new IllegalArgumentException("The pki algorithm cannot be null or empty.");
 		
 		if (keyNumber <= 0 || keyNumber > 255)
-			//TB: TODO: why is 0 not valid?
 			throw new IllegalArgumentException("The key number must be between 1 and 255.");
 	}
 
