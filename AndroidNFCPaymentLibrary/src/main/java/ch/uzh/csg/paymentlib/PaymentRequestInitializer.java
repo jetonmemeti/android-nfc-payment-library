@@ -337,7 +337,6 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					break;
 				}
 				
-				//TODO: forward only the signature by nfc? build the object on its one and verify signature?
 				byte[] encode = toForward.encode();
 				Log.d(TAG, "DBG2: "+Arrays.toString(encode)+ "//"+serverInfos.getPublicKey());
 				
@@ -419,6 +418,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				
 				switch (nofMessages) {
 				case 1:
+					//TODO: load from/save to persisted payment request! avoid double spending problems!! see PaymentRequestHandler
 					String usernamePayee = new String(response.payload(), Charset.forName("UTF-8"));
 					try {
 						PaymentRequest paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentInfos.getTimestamp());
