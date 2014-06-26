@@ -9,7 +9,6 @@
 	<name>AndroidNFCPaymentLibrary</name>
 
 	<dependencies>
-	    
 	    <dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
@@ -19,15 +18,12 @@
 	    
 	    <!-- This is used to access Android Resources (such as the HCE and IsoDep) from a Java Pro \ 
 	    	install with https://github.com/mosabua/maven-android-sdk-deployer -->
-	    	
 	    <dependency>
   			<groupId>android</groupId>
   			<artifactId>android</artifactId>
   			<version>4.4.2_r3</version>
   			<scope>provided</scope>
 		</dependency>
-	    
-		
 
 		<!-- Power Mock -->
 		<dependency>

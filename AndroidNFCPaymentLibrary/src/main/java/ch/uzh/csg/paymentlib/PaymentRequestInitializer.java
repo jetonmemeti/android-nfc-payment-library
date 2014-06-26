@@ -253,8 +253,8 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					if (timeoutHandler != null && !timeoutHandler.isInterrupted())
 						 timeoutHandler.interrupt();
 					
-					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, null);
-					
+					//TODO: already fired once on server resposne
+//					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, object);
 //					nfcTransceiver.disable(activity);
 					break;
 				}
@@ -433,8 +433,8 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					if (timeoutHandler != null && !timeoutHandler.isInterrupted())
 						timeoutHandler.interrupt();
 					
-					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, object);
-					
+					//TODO: already fired once on server resposne
+//					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, object);
 					//nfcTransceiver.disable(activity);
 					break;
 				}
