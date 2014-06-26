@@ -10,10 +10,10 @@ import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.nfclib.CustomHostApduService2;
-import ch.uzh.csg.nfclib.IMessageHandler;
+import ch.uzh.csg.nfclib.CustomHostApduService2.SendLater;
 import ch.uzh.csg.nfclib.NfcEvent;
 import ch.uzh.csg.nfclib.NfcResponder;
-import ch.uzh.csg.nfclib.SendLater;
+import ch.uzh.csg.nfclib.TransceiveHandler;
 import ch.uzh.csg.paymentlib.PaymentRequestInitializer.PaymentType;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
@@ -161,7 +161,7 @@ public class PaymentRequestHandler {
 		return nfcEventHandler;
 	}
 	
-	protected class MessageHandler implements IMessageHandler {
+	protected class MessageHandler implements TransceiveHandler {
 		
 		private PersistedPaymentRequest persistedPaymentRequest;
 		private volatile boolean serverResponseArrived = false;
@@ -244,6 +244,18 @@ public class PaymentRequestHandler {
 							 * accept/reject the payment)
 							 */
 							paymentAccepted = userPrompt.isPaymentAccepted();
+							if(paymentAccepted) {
+								PaymentRequest pr = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
+								pr.sign(userInfos.getPrivateKey());
+								byte[] encoded = pr.encode();
+								Thread t = new Thread(new TimeoutHandler());
+								t.start();
+								
+								persistencyHandler.add(persistedPaymentRequest);
+								sendLater.sendLater(new PaymentMessage().payload(encoded).bytes());
+							} else {
+								sendLater.sendLater(getError(PaymentError.PAYER_REFUSED));
+							}
 						} else {
 							// this is a new session
 							persistedPaymentRequest = persistencyHandler.getPersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
