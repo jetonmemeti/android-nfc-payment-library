@@ -40,6 +40,8 @@ import ch.uzh.csg.paymentlib.util.Config;
  */
 public class PaymentRequestInitializer implements IServerResponseListener {
 	
+	//TODO jeton: offer disable() API to disable a view?
+	
 	public static final String TAG = "##NFC## PaymentRequestInitializer";
 	
 	/**
@@ -67,7 +69,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	private volatile boolean aborted = false;
 	private boolean disabled = false;
 	
-	private Thread timeoutHandler;
+	private Thread timeoutThread;
 	private volatile boolean serverResponseArrived = false;
 	
 	/**
@@ -195,6 +197,10 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				nfcTransceiver.disable(activity);
 				break;
 			case CONNECTION_LOST:
+				//TODO jeton: abort timeout thread here!
+				if (timeoutThread != null && timeoutThread.isAlive())
+					timeoutThread.interrupt();
+				
 				nofMessages = 0;
 				break;
 			case INITIALIZED:
@@ -239,21 +245,21 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 							ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
 							paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
 							
-							if (timeoutHandler != null && !timeoutHandler.isInterrupted()) {
-								timeoutHandler.interrupt();
-							}
-							timeoutHandler = new Thread(new ServerTimeoutHandler());
-							timeoutHandler.start();
+							if (timeoutThread != null && timeoutThread.isAlive())
+								timeoutThread.interrupt();
+							
+							timeoutThread = new Thread(new ServerTimeoutHandler());
+							timeoutThread.start();
 						}
 					} catch (Exception e) {
 						sendError(PaymentError.UNEXPECTED_ERROR);
 					}
 					break;
 				case 2:
-					if (timeoutHandler != null && !timeoutHandler.isInterrupted())
-						 timeoutHandler.interrupt();
+					if (timeoutThread != null && timeoutThread.isAlive())
+						timeoutThread.interrupt();
 					
-					//TODO: already fired once on server resposne
+					//TODO: already fired once on server response
 //					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, object);
 //					nfcTransceiver.disable(activity);
 					break;
@@ -378,6 +384,10 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				//nfcTransceiver.disable(activity);
 				break;
 			case CONNECTION_LOST:
+				//TODO jeton: abort timeout thread here!
+				if (timeoutThread != null && timeoutThread.isAlive())
+					timeoutThread.interrupt();
+				
 				nofMessages = 0;
 				break;
 			case INITIALIZED:
@@ -420,18 +430,18 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 						ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer);
 						paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
 						
-						if (timeoutHandler != null && !timeoutHandler.isInterrupted()) {
-							timeoutHandler.interrupt();
-						}
-						timeoutHandler = new Thread(new ServerTimeoutHandler());
-						timeoutHandler.start();
+						if (timeoutThread != null && timeoutThread.isAlive())
+							timeoutThread.interrupt();
+						
+						timeoutThread = new Thread(new ServerTimeoutHandler());
+						timeoutThread.start();
 					} catch (Exception e) {
 						sendError(PaymentError.UNEXPECTED_ERROR);
 					}
 					break;
 				case 2:
-					if (timeoutHandler != null && !timeoutHandler.isInterrupted())
-						timeoutHandler.interrupt();
+					if (timeoutThread != null && timeoutThread.isAlive())
+						timeoutThread.interrupt();
 					
 					//TODO: already fired once on server resposne
 //					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, object);

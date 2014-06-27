@@ -58,6 +58,8 @@ public class PaymentRequestHandler {
 	private int nofMessages = 0;
 	private boolean aborted = false;
 	
+	private Thread timeoutThread = null;
+	
 	/**
 	 * Instantiates a new payment request handler, which handles incoming
 	 * payment requests (irrespective of the {@link PaymentType}).
@@ -128,6 +130,10 @@ public class PaymentRequestHandler {
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
 				break;
 			case CONNECTION_LOST:
+				//TODO jeton: abort timeout thread here!
+				if (timeoutThread != null && timeoutThread.isAlive())
+					timeoutThread.interrupt();
+				
 				nofMessages = 0;
 				break;
 			case INITIALIZED: //do nothing
@@ -189,8 +195,11 @@ public class PaymentRequestHandler {
 				case 1:
 					byte[] bytes = userInfos.getUsername().getBytes(Charset.forName("UTF-8"));
 					
-					Thread t = new Thread(new TimeoutHandler());
-					t.start();
+					if (timeoutThread != null && timeoutThread.isAlive())
+						timeoutThread.interrupt();
+					
+					timeoutThread = new Thread(new TimeoutHandler());
+					timeoutThread.start();
 					
 					return new PaymentMessage().payee().payload(bytes).bytes();
 				case 2:
@@ -248,10 +257,15 @@ public class PaymentRequestHandler {
 								PaymentRequest pr = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
 								pr.sign(userInfos.getPrivateKey());
 								byte[] encoded = pr.encode();
-								Thread t = new Thread(new TimeoutHandler());
-								t.start();
 								
 								persistencyHandler.add(persistedPaymentRequest);
+								
+								if (timeoutThread != null && timeoutThread.isAlive())
+									timeoutThread.interrupt();
+								
+								timeoutThread = new Thread(new TimeoutHandler());
+								timeoutThread.start();
+								
 								sendLater.sendLater(new PaymentMessage().payload(encoded).bytes());
 							} else {
 								sendLater.sendLater(getError(PaymentError.PAYER_REFUSED));
@@ -274,8 +288,11 @@ public class PaymentRequestHandler {
 									pr.sign(userInfos.getPrivateKey());
 									byte[] encoded = pr.encode();
 									
-									Thread t = new Thread(new TimeoutHandler());
-									t.start();
+									if (timeoutThread != null && timeoutThread.isAlive())
+										timeoutThread.interrupt();
+									
+									timeoutThread = new Thread(new TimeoutHandler());
+									timeoutThread.start();
 									
 									persistencyHandler.add(persistedPaymentRequest);
 									sendLater.sendLater(new PaymentMessage().payload(encoded).bytes());
@@ -288,8 +305,8 @@ public class PaymentRequestHandler {
 								@Override
 								public void failed() {
 									sendLater.sendLater(getError(PaymentError.PAYER_REFUSED));
-									
 								}
+								
 							});
 						}
 						
