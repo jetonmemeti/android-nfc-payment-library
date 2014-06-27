@@ -342,7 +342,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				}
 				
 				byte[] encode = toForward.encode();
-				Log.d(TAG, "DBG2: "+Arrays.toString(encode)+ "//"+serverInfos.getPublicKey());
+				Log.d(TAG, "DBG2: "+Arrays.toString(encode));
 				
 				switch (paymentType) {
 				case REQUEST_PAYMENT:

@@ -32,6 +32,7 @@ import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.customserialization.exceptions.UnknownCurrencyException;
+import ch.uzh.csg.nfclib.ISendLater;
 import ch.uzh.csg.nfclib.NfcEvent.Type;
 import ch.uzh.csg.paymentlib.PaymentRequestHandler.MessageHandler;
 import ch.uzh.csg.paymentlib.container.PaymentInfos;
@@ -60,7 +61,8 @@ public class PaymentRequestHandlerTest {
 	private Object paymentSuccessObject = null;
 	private boolean paymentOtherEvent = false;
 	private Object paymentOtherEventObject = null;
-	
+	private byte[] sendLaterBytes = null;
+
 	private void reset() {
 		paymentError = false;
 		paymentErrorObject = null;
@@ -72,6 +74,7 @@ public class PaymentRequestHandlerTest {
 		paymentSuccessObject = null;
 		paymentOtherEvent = false;
 		paymentOtherEventObject = null;
+		sendLaterBytes = null;
 	}
 	
 	@Before
@@ -129,16 +132,17 @@ public class PaymentRequestHandlerTest {
 	};
 	
 	private IUserPromptPaymentRequest defaultUserPrompt = new IUserPromptPaymentRequest() {
-		@Override
-		public boolean promptUserPaymentRequest(String username, Currency currency, long amount) {
-			// accept the payment
-			return true;
-		}
 
 		@Override
 		public boolean isPaymentAccepted() {
 			// accept the payment
 			return true;
+		}
+
+		@Override
+		public void promptUserPaymentRequest(String username, Currency currency, long amount, ch.uzh.csg.paymentlib.Answer answer) {
+			// accept the payment
+			answer.success();
 		}
 	};
 	
@@ -155,13 +159,20 @@ public class PaymentRequestHandlerTest {
 		}
 	};
 	
+	private ISendLater sendLater = new ISendLater() {
+		@Override
+		public void sendLater(byte[] arg0) {
+			sendLaterBytes = arg0;
+		}
+	};
+	
 	@Test
 	public void testPaymentRequestHandler_Payee_ServerRefuses() throws Exception {
 		/*
 		 * Simulates server refuses the payment for any reason
 		 */
 		reset();
-
+		
 		KeyPair keyPairPayee = TestUtils.generateKeyPair();
 		UserInfos userInfosPayee = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
@@ -179,10 +190,13 @@ public class PaymentRequestHandlerTest {
 		PaymentMessage pm = new PaymentMessage().payee().payload(initMessage.encode());
 		assertTrue(pm.isPayee());
 		
-		byte[] handleMessage = messageHandler.handleMessage(pm.bytes());
-		pm = new PaymentMessage().bytes(handleMessage);
+		byte[] handleMessage = messageHandler.handleMessage(pm.bytes(), sendLater);
+		assertNull(handleMessage);
 		
+		assertNotNull(sendLaterBytes);
+		pm = new PaymentMessage().bytes(sendLaterBytes);
 		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		sendLaterBytes = null;
 		
 		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
 		assertEquals(userInfosPayer.getUsername(), paymentRequestPayer.getUsernamePayer());
@@ -210,7 +224,10 @@ public class PaymentRequestHandlerTest {
 		
 		byte[] data = new PaymentMessage().payee().payload(encode2).bytes();
 		
-		byte[] handleMessage2 = messageHandler.handleMessage(data);
+		byte[] handleMessage2 = messageHandler.handleMessage(data, sendLater);
+		assertNotNull(handleMessage2);
+		assertNull(sendLaterBytes);
+		
 		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
 		assertEquals(PaymentMessage.DEFAULT, pm2.header());
 		assertEquals(1, pm2.payload().length);
@@ -254,12 +271,15 @@ public class PaymentRequestHandlerTest {
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
 		byte[] data = new PaymentMessage().payee().payload(initMessage.encode()).bytes();
 		
-		byte[] handleMessage = messageHandler.handleMessage(data);
+		byte[] handleMessage = messageHandler.handleMessage(data, sendLater);
+		assertNull(handleMessage);
 		
-		PaymentMessage pm = new PaymentMessage().bytes(handleMessage);
+		assertNotNull(sendLaterBytes);
+		PaymentMessage pm = new PaymentMessage().bytes(sendLaterBytes);
 		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		sendLaterBytes = null;
+
 		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
-		
 		assertEquals(userInfosPayer.getUsername(), paymentRequestPayer.getUsernamePayer());
 		assertEquals(userInfosPayee.getUsername(), paymentRequestPayer.getUsernamePayee());
 		assertEquals(paymentInfos.getCurrency().getCode(), paymentRequestPayer.getCurrency().getCode());
@@ -284,7 +304,10 @@ public class PaymentRequestHandlerTest {
 		
 		data = new PaymentMessage().payee().payload(encode2).bytes();
 		
-		byte[] handleMessage2 = messageHandler.handleMessage(data);
+		byte[] handleMessage2 = messageHandler.handleMessage(data, sendLater);
+		assertNotNull(handleMessage2);
+		assertNull(sendLaterBytes);
+		
 		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
 		assertEquals(PaymentMessage.DEFAULT, pm2.header());
 		assertEquals(1, pm2.payload().length);
@@ -330,12 +353,15 @@ public class PaymentRequestHandlerTest {
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
 		byte[] data = new PaymentMessage().payee().payload(initMessage.encode()).bytes();
 		
-		byte[] handleMessage = messageHandler.handleMessage(data);
+		byte[] handleMessage = messageHandler.handleMessage(data, sendLater);
+		assertNull(handleMessage);
 		
-		PaymentMessage pm = new PaymentMessage().bytes(handleMessage);
+		assertNotNull(sendLaterBytes);
+		PaymentMessage pm = new PaymentMessage().bytes(sendLaterBytes);
 		assertEquals(PaymentMessage.DEFAULT, pm.header());
-		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
+		sendLaterBytes = null;
 		
+		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
 		assertEquals(userInfosPayer.getUsername(), paymentRequestPayer.getUsernamePayer());
 		assertEquals(userInfosPayee.getUsername(), paymentRequestPayer.getUsernamePayee());
 		assertEquals(paymentInfos.getCurrency().getCode(), paymentRequestPayer.getCurrency().getCode());
@@ -381,12 +407,15 @@ public class PaymentRequestHandlerTest {
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
 		byte[] data = new PaymentMessage().payee().payload(initMessage.encode()).bytes();
 		
-		byte[] handleMessage = messageHandler.handleMessage(data);
+		byte[] handleMessage = messageHandler.handleMessage(data, sendLater);
+		assertNull(handleMessage);
 		
-		PaymentMessage pm = new PaymentMessage().bytes(handleMessage);
+		assertNotNull(sendLaterBytes);
+		PaymentMessage pm = new PaymentMessage().bytes(sendLaterBytes);
 		assertEquals(PaymentMessage.DEFAULT, pm.header());
-		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
+		sendLaterBytes = null;
 		
+		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
 		assertEquals(userInfosPayer.getUsername(), paymentRequestPayer.getUsernamePayer());
 		assertEquals(userInfosPayee.getUsername(), paymentRequestPayer.getUsernamePayee());
 		assertEquals(paymentInfos.getCurrency().getCode(), paymentRequestPayer.getCurrency().getCode());
@@ -413,7 +442,10 @@ public class PaymentRequestHandlerTest {
 		
 		pm = new PaymentMessage().payee().payload(encode2);
 		
-		byte[] handleMessage2 = messageHandler.handleMessage(pm.bytes());
+		byte[] handleMessage2 = messageHandler.handleMessage(pm.bytes(), sendLater);
+		assertNotNull(handleMessage2);
+		assertNull(sendLaterBytes);
+		
 		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
 		assertEquals(PaymentMessage.DEFAULT, pm2.header());
 		assertEquals(1, pm2.payload().length);
@@ -482,6 +514,7 @@ public class PaymentRequestHandlerTest {
 		}
 	};
 	
+	@Test
 	public void testPaymentRequestHandler_Payee_PayeeRemovesDevice() throws Exception {
 		/*
 		 * Simulates a payment where the payer removes the device to click on
@@ -507,12 +540,14 @@ public class PaymentRequestHandlerTest {
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
 		byte[] data = new PaymentMessage().payee().payload(initMessage.encode()).bytes();
 
-		byte[] handleMessage = messageHandler.handleMessage(data);
-
-		PaymentMessage pm = new PaymentMessage().bytes(handleMessage);
+		byte[] handleMessage = messageHandler.handleMessage(data, sendLater);
+		assertNull(handleMessage);
+		assertNotNull(sendLaterBytes);
+		PaymentMessage pm = new PaymentMessage().bytes(sendLaterBytes);
 		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		sendLaterBytes = null;
+		
 		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
-
 		assertEquals(userInfosPayer.getUsername(), paymentRequestPayer.getUsernamePayer());
 		assertEquals(userInfosPayee.getUsername(), paymentRequestPayer.getUsernamePayee());
 		assertEquals(paymentInfos.getCurrency().getCode(), paymentRequestPayer.getCurrency().getCode());
@@ -522,12 +557,14 @@ public class PaymentRequestHandlerTest {
 
 		// assume that the payer removes his device - on re-connect receive the same payment request again
 		prh.getNfcEventHandler().handleMessage(Type.CONNECTION_LOST, null);
-		handleMessage = messageHandler.handleMessage(data);
-
-		pm = new PaymentMessage().bytes(handleMessage);
+		handleMessage = messageHandler.handleMessage(data, sendLater);
+		assertNull(handleMessage);
+		assertNotNull(sendLaterBytes);
+		pm = new PaymentMessage().bytes(sendLaterBytes);
 		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		sendLaterBytes = null;
+		
 		paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
-
 		assertEquals(userInfosPayer.getUsername(), paymentRequestPayer.getUsernamePayer());
 		assertEquals(userInfosPayee.getUsername(), paymentRequestPayer.getUsernamePayee());
 		assertEquals(paymentInfos.getCurrency().getCode(), paymentRequestPayer.getCurrency().getCode());
@@ -551,8 +588,12 @@ public class PaymentRequestHandlerTest {
 
 		ServerPaymentResponse serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, encode);
 		byte[] encode2 = serverPaymentResponse.getPaymentResponsePayer().encode();
+		
+		pm = new PaymentMessage().payee().payload(encode2);
 
-		byte[] handleMessage2 = messageHandler.handleMessage(encode2);
+		byte[] handleMessage2 = messageHandler.handleMessage(pm.bytes(), sendLater);
+		assertNull(sendLaterBytes);
+		
 		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
 		assertEquals(PaymentMessage.DEFAULT, pm2.header());
 		assertEquals(1, pm2.payload().length);
@@ -600,7 +641,8 @@ public class PaymentRequestHandlerTest {
 		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });
 		assertTrue(pm.isPayer());
 		
-		byte[] handleMessage = messageHandler.handleMessage(pm.bytes());
+		byte[] handleMessage = messageHandler.handleMessage(pm.bytes(), sendLater);
+		assertNull(sendLaterBytes);
 		pm = new PaymentMessage().bytes(handleMessage);
 		
 		assertEquals(PaymentMessage.DEFAULT, pm.header());
@@ -624,7 +666,9 @@ public class PaymentRequestHandlerTest {
 		
 		byte[] data = new PaymentMessage().payer().payload(encode2).bytes();
 		
-		byte[] handleMessage2 = messageHandler.handleMessage(data);
+		byte[] handleMessage2 = messageHandler.handleMessage(data, sendLater);
+		assertNull(sendLaterBytes);
+		
 		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
 		assertEquals(PaymentMessage.DEFAULT, pm2.header());
 		assertEquals(1, pm2.payload().length);
@@ -668,7 +712,8 @@ public class PaymentRequestHandlerTest {
 		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });
 		assertTrue(pm.isPayer());
 		
-		byte[] handleMessage = messageHandler.handleMessage(pm.bytes());
+		byte[] handleMessage = messageHandler.handleMessage(pm.bytes(), sendLater);
+		assertNull(sendLaterBytes);
 		pm = new PaymentMessage().bytes(handleMessage);
 		
 		assertEquals(PaymentMessage.DEFAULT, pm.header());
@@ -691,7 +736,9 @@ public class PaymentRequestHandlerTest {
 		
 		byte[] data = new PaymentMessage().payer().payload(encode2).bytes();
 		
-		byte[] handleMessage2 = messageHandler.handleMessage(data);
+		byte[] handleMessage2 = messageHandler.handleMessage(data, sendLater);
+		assertNull(sendLaterBytes);
+		
 		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
 		assertEquals(PaymentMessage.DEFAULT, pm2.header());
 		assertEquals(1, pm2.payload().length);
@@ -734,7 +781,8 @@ public class PaymentRequestHandlerTest {
 		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });
 		assertTrue(pm.isPayer());
 		
-		byte[] handleMessage = messageHandler.handleMessage(pm.bytes());
+		byte[] handleMessage = messageHandler.handleMessage(pm.bytes(), sendLater);
+		assertNull(sendLaterBytes);
 		pm = new PaymentMessage().bytes(handleMessage);
 		
 		assertEquals(PaymentMessage.DEFAULT, pm.header());

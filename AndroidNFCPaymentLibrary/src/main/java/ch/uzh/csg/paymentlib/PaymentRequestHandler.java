@@ -10,7 +10,7 @@ import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.nfclib.CustomHostApduService2;
-import ch.uzh.csg.nfclib.CustomHostApduService2.SendLater;
+import ch.uzh.csg.nfclib.ISendLater;
 import ch.uzh.csg.nfclib.NfcEvent;
 import ch.uzh.csg.nfclib.NfcResponder;
 import ch.uzh.csg.nfclib.TransceiveHandler;
@@ -173,7 +173,7 @@ public class PaymentRequestHandler {
 		private volatile boolean serverResponseArrived = false;
 
 
-		public byte[] handleMessage(byte[] message, final SendLater sendLater) {
+		public byte[] handleMessage(byte[] message, final ISendLater sendLater) {
 			Log.d(TAG, "got payment message: "+Arrays.toString(message));
 			if (aborted)
 				return null;
