@@ -278,10 +278,10 @@ public class PaymentRequestHandler {
 								persistedPaymentRequest = new PersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
 							}
 							
-							userPrompt.promptUserPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), new Answer() {
+							userPrompt.promptUserPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), new IUserPromptAnswer() {
 								
 								@Override
-								public void success() {
+								public void acceptPayment() {
 									try {
 									//response 1st message
 									PaymentRequest pr = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
@@ -303,7 +303,7 @@ public class PaymentRequestHandler {
 								}
 								
 								@Override
-								public void failed() {
+								public void rejectPayment() {
 									sendLater.sendLater(getError(PaymentError.PAYER_REFUSED));
 								}
 								

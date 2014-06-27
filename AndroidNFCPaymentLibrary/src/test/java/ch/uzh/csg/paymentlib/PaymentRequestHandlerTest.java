@@ -140,9 +140,9 @@ public class PaymentRequestHandlerTest {
 		}
 
 		@Override
-		public void promptUserPaymentRequest(String username, Currency currency, long amount, ch.uzh.csg.paymentlib.Answer answer) {
+		public void promptUserPaymentRequest(String username, Currency currency, long amount, IUserPromptAnswer answer) {
 			// accept the payment
-			answer.success();
+			answer.acceptPayment();
 		}
 	};
 	
