@@ -391,6 +391,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				nofMessages = 0;
 				break;
 			case INITIALIZED:
+				nofMessages = 0;
 				try {
 					//send empty message, we just need the payee's username
 					nfcTransceiver.transceive(new PaymentMessage().payer().payload(new byte[] { 0x00 }).bytes());

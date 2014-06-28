@@ -56,7 +56,6 @@ public class PaymentRequestHandler {
 	private MessageHandler messageHandler;
 	
 	private int nofMessages = 0;
-	private boolean aborted = false;
 	
 	private Thread timeoutThread = null;
 	
@@ -120,23 +119,19 @@ public class PaymentRequestHandler {
 		
 		@Override
 		public void handleMessage(Type event, Object object) {
-			if (aborted)
-				return;
-			
+		
 			switch (event) {
 			case INIT_FAILED:
 			case FATAL_ERROR:
-				aborted = true;
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
 				break;
 			case CONNECTION_LOST:
 				//TODO jeton: abort timeout thread here!
 				if (timeoutThread != null && timeoutThread.isAlive())
 					timeoutThread.interrupt();
-				
-				nofMessages = 0;
 				break;
 			case INITIALIZED: //do nothing
+				nofMessages = 0;
 				break;
 			case MESSAGE_RECEIVED: //do nothing, handle in IMessageHandler
 				break;
@@ -148,7 +143,7 @@ public class PaymentRequestHandler {
 	};
 	
 	private byte[] getError(PaymentError err) {
-		aborted = true;
+		messageHandler.resetState();
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
 		return new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes();
 	}
@@ -169,14 +164,17 @@ public class PaymentRequestHandler {
 	
 	protected class MessageHandler implements TransceiveHandler {
 		
-		private PersistedPaymentRequest persistedPaymentRequest;
+		private PersistedPaymentRequest persistedPaymentRequest = null;
 		private volatile boolean serverResponseArrived = false;
+		
+		public void resetState() {
+			serverResponseArrived = false;
+			persistedPaymentRequest = null;
+		}
 
 
 		public byte[] handleMessage(byte[] message, final ISendLater sendLater) {
 			Log.d(TAG, "got payment message: "+Arrays.toString(message));
-			if (aborted)
-				return null;
 			
 			nofMessages++;
 			PaymentMessage pm = new PaymentMessage().bytes(message);
@@ -213,6 +211,7 @@ public class PaymentRequestHandler {
 							Log.d(TAG, "exception sig not valid " + serverInfos.getPublicKey());
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
+							resetState();
 							persistencyHandler.delete(persistedPaymentRequest);
 							
 							switch (paymentResponse.getStatus()) {
@@ -272,6 +271,7 @@ public class PaymentRequestHandler {
 							}
 						} else {
 							// this is a new session
+							Log.d(TAG, "wait for user answer");
 							persistedPaymentRequest = persistencyHandler.getPersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
 							if (persistedPaymentRequest == null) {
 								// this is a new payment request (not a payment request with a lost server response)
@@ -326,8 +326,8 @@ public class PaymentRequestHandler {
 							Log.d(TAG, "exception sig not valid " + serverInfos.getPublicKey());
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
+							resetState();
 							persistencyHandler.delete(persistedPaymentRequest);
-							
 							switch (paymentResponse.getStatus()) {
 							case FAILURE:
 								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED);
