@@ -9,11 +9,11 @@ import ch.uzh.csg.mbps.customserialization.DecoderFactory;
 import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
-import ch.uzh.csg.nfclib.CustomHostApduService2;
+import ch.uzh.csg.nfclib.HostApduServiceMBPS;
 import ch.uzh.csg.nfclib.ISendLater;
 import ch.uzh.csg.nfclib.NfcEvent;
 import ch.uzh.csg.nfclib.NfcResponder;
-import ch.uzh.csg.nfclib.TransceiveHandler;
+import ch.uzh.csg.nfclib.ITransceiveHandler;
 import ch.uzh.csg.paymentlib.PaymentRequestInitializer.PaymentType;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
@@ -91,8 +91,8 @@ public class PaymentRequestHandler {
 		this.persistencyHandler = persistencyHandler;
 		this.messageHandler = new MessageHandler();
 		
-		NfcResponder c = new NfcResponder(activity, nfcEventHandler, messageHandler);
-		CustomHostApduService2.init(c);
+		NfcResponder c = new NfcResponder(nfcEventHandler, messageHandler);
+		HostApduServiceMBPS.init(c);
 	}
 	
 	private void checkParameters(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
@@ -162,7 +162,7 @@ public class PaymentRequestHandler {
 		return nfcEventHandler;
 	}
 	
-	protected class MessageHandler implements TransceiveHandler {
+	protected class MessageHandler implements ITransceiveHandler {
 		
 		private PersistedPaymentRequest persistedPaymentRequest = null;
 		private volatile boolean serverResponseArrived = false;

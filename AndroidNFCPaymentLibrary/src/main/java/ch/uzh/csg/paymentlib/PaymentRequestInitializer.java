@@ -13,7 +13,7 @@ import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.nfclib.NfcEvent;
 import ch.uzh.csg.nfclib.NfcLibException;
-import ch.uzh.csg.nfclib.NfcTransceiver;
+import ch.uzh.csg.nfclib.NfcInitiator;
 import ch.uzh.csg.paymentlib.container.PaymentInfos;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
@@ -64,7 +64,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	private ServerInfos serverInfos;
 	private PaymentInfos paymentInfos;
 	
-	private volatile NfcTransceiver nfcTransceiver;
+	private volatile NfcInitiator nfcTransceiver;
 	private int nofMessages = 0;
 	private volatile boolean aborted = false;
 	private boolean disabled = false;
@@ -104,7 +104,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	 * NfcTransceiver. For productive use the public constructor, otherwise the
 	 * NFC will not work.
 	 */
-	protected PaymentRequestInitializer(Activity activity, NfcTransceiver nfcTransceiver, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NfcLibException {
+	protected PaymentRequestInitializer(Activity activity, NfcInitiator nfcTransceiver, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NfcLibException {
 		checkParameters(activity, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
 		
 		this.paymentType = type;
@@ -137,7 +137,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			throw new IllegalArgumentException("The payment type cannot be null.");
 	}
 	
-	private void initPayment(NfcTransceiver nfcTransceiver) throws NfcLibException {
+	private void initPayment(NfcInitiator nfcTransceiver) throws NfcLibException {
 		NfcEvent nfcEventHandler;
 		if (this.paymentType == PaymentType.REQUEST_PAYMENT)
 			nfcEventHandler = nfcEventHandlerRequest;
@@ -147,7 +147,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		if (nfcTransceiver != null) {
 			this.nfcTransceiver = nfcTransceiver;
 		} else {
-			this.nfcTransceiver = new NfcTransceiver(nfcEventHandler, activity, userInfos.getUserId());
+			this.nfcTransceiver = new NfcInitiator(nfcEventHandler, activity, userInfos.getUserId());
 			
 			Log.d(TAG, "init and enable transceiver");
 			this.nfcTransceiver.enable(activity);
