@@ -14,7 +14,6 @@ import ch.uzh.csg.nfclib.ISendLater;
 import ch.uzh.csg.nfclib.NfcEvent;
 import ch.uzh.csg.nfclib.NfcResponder;
 import ch.uzh.csg.nfclib.ITransceiveHandler;
-import ch.uzh.csg.paymentlib.PaymentRequestInitializer.PaymentType;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
@@ -26,7 +25,7 @@ import ch.uzh.csg.paymentlib.util.Config;
 
 /**
  * This class is the counterpart of {@link PaymentRequestInitializer} and
- * handles a payment request comming from another NFC device.
+ * handles a payment request coming from another NFC device.
  * 
  * This class handles the underlying NFC and the messages which need to be
  * processed and returned.
@@ -171,7 +170,6 @@ public class PaymentRequestHandler {
 			serverResponseArrived = false;
 			persistedPaymentRequest = null;
 		}
-
 
 		public byte[] handleMessage(byte[] message, final ISendLater sendLater) {
 			Log.d(TAG, "got payment message: "+Arrays.toString(message));

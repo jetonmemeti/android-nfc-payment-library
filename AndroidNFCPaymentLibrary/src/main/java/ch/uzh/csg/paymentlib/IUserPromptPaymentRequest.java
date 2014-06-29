@@ -4,7 +4,8 @@ import ch.uzh.csg.mbps.customserialization.Currency;
 
 /**
  * The user of this interface can check if the application user accepted or
- * rejected a payment request (by clicking the appropriate button on the UI).
+ * rejected a payment request (by clicking the appropriate button on the UI) or
+ * prompt the user to do so.
  * 
  * @author Jeton Memeti
  * 
@@ -12,8 +13,10 @@ import ch.uzh.csg.mbps.customserialization.Currency;
 public interface IUserPromptPaymentRequest {
 
 	/**
-	 * Returns the application user's decision if he wants to accept or reject
-	 * the payment with the given parameters.
+	 * Prompts the application user if he wants to accept or reject the payment
+	 * with the given parameters. The user's answer has to be passed to the
+	 * answer object as soon as the user has decided (e.g., clicked on a
+	 * button).
 	 * 
 	 * @param username
 	 *            the payee's username
@@ -21,7 +24,10 @@ public interface IUserPromptPaymentRequest {
 	 *            the payment {@link Currency}
 	 * @param amount
 	 *            the payment amount in the given currency
-	 * @return true if the user accepts, false if he rejects
+	 * @param answer
+	 *            the {@link IUserPromptPaymentRequest} to pass the user's
+	 *            answer once the user decided if he wants to accept or reject
+	 *            the payment request
 	 */
 	public void promptUserPaymentRequest(String username, Currency currency, long amount, IUserPromptAnswer answer);
 	
@@ -30,7 +36,7 @@ public interface IUserPromptPaymentRequest {
 	 * before (see getPaymentRequestAnswer). This avoids prompting the user
 	 * again (e.g., with a dialog) and returns the already entered decision.
 	 * 
-	 * @return true if the user accepted the payment, false otherwise
+	 * @return true if the user has accepted the payment, false otherwise
 	 */
 	public boolean isPaymentAccepted();
 	

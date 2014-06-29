@@ -21,7 +21,6 @@ public class PaymentMessage {
 	public static final byte ERROR = 0x01; // if not set, then PROCEED
 	public static final byte PAYER = 0x02; // if not set, then PAYEE
 
-	// data
 	private byte[] payload = new byte[0];
 	private int header = DEFAULT;
 	
