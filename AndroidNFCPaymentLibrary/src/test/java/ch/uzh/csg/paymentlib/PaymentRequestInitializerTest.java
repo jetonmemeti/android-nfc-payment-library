@@ -38,7 +38,7 @@ import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.nfclib.NfcEvent.Type;
-import ch.uzh.csg.nfclib.NfcTransceiver;
+import ch.uzh.csg.nfclib.NfcInitiator;
 import ch.uzh.csg.paymentlib.PaymentRequestInitializer.PaymentType;
 import ch.uzh.csg.paymentlib.container.PaymentInfos;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
@@ -188,7 +188,7 @@ public class PaymentRequestInitializerTest {
 		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
-		NfcTransceiver transceiver = mock(NfcTransceiver.class);
+		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
 		final PaymentRequestInitializer pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfos, paymentInfos, serverInfos, PaymentType.REQUEST_PAYMENT);
 		
@@ -257,7 +257,7 @@ public class PaymentRequestInitializerTest {
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();
 		final UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		
-		NfcTransceiver transceiver = mock(NfcTransceiver.class);
+		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
 		final PaymentRequestInitializer pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayee, paymentInfos, serverInfos, PaymentType.REQUEST_PAYMENT);
 		
@@ -347,7 +347,7 @@ public class PaymentRequestInitializerTest {
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();
 		final UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		
-		NfcTransceiver transceiver = mock(NfcTransceiver.class);
+		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
 		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayee, paymentInfos, serverInfos, PaymentType.REQUEST_PAYMENT);
 		
@@ -442,7 +442,7 @@ public class PaymentRequestInitializerTest {
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();
 		final UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		
-		NfcTransceiver transceiver = mock(NfcTransceiver.class);
+		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
 		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayee, paymentInfos, serverInfos, PaymentType.REQUEST_PAYMENT);
 		
@@ -541,7 +541,7 @@ public class PaymentRequestInitializerTest {
 		KeyPair keyPairPayer = TestUtils.generateKeyPair();
 		final UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		
-		NfcTransceiver transceiver = mock(NfcTransceiver.class);
+		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
 		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayee, paymentInfos, serverInfos, PaymentType.REQUEST_PAYMENT);
 		
@@ -632,7 +632,7 @@ public class PaymentRequestInitializerTest {
 		KeyPair keyPairPayee = TestUtils.generateKeyPair();
 		final UserInfos userInfosPayee = new UserInfos("payee", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		
-		NfcTransceiver transceiver = mock(NfcTransceiver.class);
+		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
 		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayer, paymentInfos, serverInfos, PaymentType.SEND_PAYMENT);
 		
@@ -724,7 +724,7 @@ public class PaymentRequestInitializerTest {
 		KeyPair keyPairPayee = TestUtils.generateKeyPair();
 		final UserInfos userInfosPayee = new UserInfos("buyer", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		
-		NfcTransceiver transceiver = mock(NfcTransceiver.class);
+		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
 		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayer, paymentInfos, serverInfos, PaymentType.SEND_PAYMENT);
 		
@@ -821,7 +821,7 @@ public class PaymentRequestInitializerTest {
 		KeyPair keyPairPayee = TestUtils.generateKeyPair();
 		final UserInfos userInfosPayee = new UserInfos("buyer", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		
-		NfcTransceiver transceiver = mock(NfcTransceiver.class);
+		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
 		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayer, paymentInfos, serverInfos, PaymentType.SEND_PAYMENT);
 		
