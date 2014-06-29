@@ -9,7 +9,7 @@ import ch.uzh.csg.mbps.customserialization.DecoderFactory;
 import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
-import ch.uzh.csg.nfclib.HostApduServiceMBPS;
+import ch.uzh.csg.nfclib.HostApduServiceNfcLib;
 import ch.uzh.csg.nfclib.ISendLater;
 import ch.uzh.csg.nfclib.NfcEvent;
 import ch.uzh.csg.nfclib.NfcResponder;
@@ -91,7 +91,7 @@ public class PaymentRequestHandler {
 		this.messageHandler = new MessageHandler();
 		
 		NfcResponder c = new NfcResponder(nfcEventHandler, messageHandler);
-		HostApduServiceMBPS.init(c);
+		HostApduServiceNfcLib.init(c);
 	}
 	
 	private void checkParameters(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, ServerInfos serverInfos, IUserPromptPaymentRequest userPrompt, IPersistencyHandler persistencyHandler) throws IllegalArgumentException {
