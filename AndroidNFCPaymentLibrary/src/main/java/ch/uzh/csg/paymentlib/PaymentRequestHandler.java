@@ -211,8 +211,8 @@ public class PaymentRequestHandler {
 							Log.d(TAG, "exception sig not valid " + serverInfos.getPublicKey());
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
-							resetState();
 							persistencyHandler.delete(persistedPaymentRequest);
+							resetState();
 							
 							switch (paymentResponse.getStatus()) {
 							case FAILURE:
@@ -326,8 +326,8 @@ public class PaymentRequestHandler {
 							Log.d(TAG, "exception sig not valid " + serverInfos.getPublicKey());
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
-							resetState();
 							persistencyHandler.delete(persistedPaymentRequest);
+							resetState();
 							switch (paymentResponse.getStatus()) {
 							case FAILURE:
 								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED);
