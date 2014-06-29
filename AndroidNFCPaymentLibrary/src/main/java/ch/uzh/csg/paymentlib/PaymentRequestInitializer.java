@@ -194,16 +194,14 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case FATAL_ERROR:
 				aborted = true;
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
-				nfcTransceiver.disable(activity);
 				break;
 			case CONNECTION_LOST:
-				//TODO jeton: abort timeout thread here!
+				// abort timeout thread
 				if (timeoutThread != null && timeoutThread.isAlive())
 					timeoutThread.interrupt();
-				
-				nofMessages = 0;
 				break;
 			case INITIALIZED:
+				nofMessages = 0;
 				try {
 					InitMessagePayee initMessage = new InitMessagePayee(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
 					nfcTransceiver.transceive(new PaymentMessage().payee().payload(initMessage.encode()).bytes());
@@ -258,10 +256,6 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				case 2:
 					if (timeoutThread != null && timeoutThread.isAlive())
 						timeoutThread.interrupt();
-					
-					//TODO: already fired once on server response
-//					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, object);
-//					nfcTransceiver.disable(activity);
 					break;
 				}
 				break;
@@ -381,14 +375,11 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case FATAL_ERROR:
 				aborted = true;
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
-				//nfcTransceiver.disable(activity);
 				break;
 			case CONNECTION_LOST:
-				//TODO jeton: abort timeout thread here!
+				// abort timeout thread
 				if (timeoutThread != null && timeoutThread.isAlive())
 					timeoutThread.interrupt();
-				
-				nofMessages = 0;
 				break;
 			case INITIALIZED:
 				nofMessages = 0;
@@ -443,10 +434,6 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				case 2:
 					if (timeoutThread != null && timeoutThread.isAlive())
 						timeoutThread.interrupt();
-					
-					//TODO: already fired once on server resposne
-//					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, object);
-					//nfcTransceiver.disable(activity);
 					break;
 				}
 				break;

@@ -125,7 +125,7 @@ public class PaymentRequestHandler {
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
 				break;
 			case CONNECTION_LOST:
-				//TODO jeton: abort timeout thread here!
+				// abort timeout thread
 				if (timeoutThread != null && timeoutThread.isAlive())
 					timeoutThread.interrupt();
 				break;
