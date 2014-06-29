@@ -557,6 +557,7 @@ public class PaymentRequestHandlerTest {
 
 		// assume that the payer removes his device - on re-connect receive the same payment request again
 		prh.getNfcEventHandler().handleMessage(Type.CONNECTION_LOST, null);
+		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		handleMessage = messageHandler.handleMessage(data, sendLater);
 		assertNull(handleMessage);
 		assertNotNull(sendLaterBytes);
