@@ -45,6 +45,7 @@ import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.messages.PaymentError;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
+import ch.uzh.csg.paymentlib.testutils.PersistencyHandler;
 import ch.uzh.csg.paymentlib.testutils.TestUtils;
 import ch.uzh.csg.paymentlib.util.Config;
 
@@ -65,6 +66,8 @@ public class PaymentRequestInitializerTest {
 	private boolean paymentOtherEvent = false;
 	private Object paymentOtherEventObject = null;
 	
+	private PersistencyHandler persistencyHandler;
+	
 	private KeyPair keyPairServer;
 	private PaymentRequestInitializer pri;
 	
@@ -82,6 +85,8 @@ public class PaymentRequestInitializerTest {
 		paymentSuccessObject = null;
 		paymentOtherEvent = false;
 		paymentOtherEventObject = null;
+		
+		persistencyHandler = new PersistencyHandler();
 		
 		serverRefuse = false;
 		serverTimeout = false;
@@ -190,7 +195,7 @@ public class PaymentRequestInitializerTest {
 		
 		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
-		final PaymentRequestInitializer pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfos, paymentInfos, serverInfos, PaymentType.REQUEST_PAYMENT);
+		final PaymentRequestInitializer pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfos, paymentInfos, serverInfos, persistencyHandler, PaymentType.REQUEST_PAYMENT);
 		
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
@@ -221,6 +226,7 @@ public class PaymentRequestInitializerTest {
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
+		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver).transceive(any(byte[].class));
 		verify(transceiver).disable(any(Activity.class));
@@ -259,7 +265,7 @@ public class PaymentRequestInitializerTest {
 		
 		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
-		final PaymentRequestInitializer pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayee, paymentInfos, serverInfos, PaymentType.REQUEST_PAYMENT);
+		final PaymentRequestInitializer pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayee, paymentInfos, serverInfos, persistencyHandler, PaymentType.REQUEST_PAYMENT);
 		
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
@@ -310,6 +316,7 @@ public class PaymentRequestInitializerTest {
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
+		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
 		verify(transceiver).disable(any(Activity.class));
@@ -349,7 +356,7 @@ public class PaymentRequestInitializerTest {
 		
 		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
-		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayee, paymentInfos, serverInfos, PaymentType.REQUEST_PAYMENT);
+		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayee, paymentInfos, serverInfos, persistencyHandler, PaymentType.REQUEST_PAYMENT);
 		
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
@@ -404,6 +411,7 @@ public class PaymentRequestInitializerTest {
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
+		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
 		//TODO jeton: needed?
@@ -444,7 +452,7 @@ public class PaymentRequestInitializerTest {
 		
 		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
-		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayee, paymentInfos, serverInfos, PaymentType.REQUEST_PAYMENT);
+		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayee, paymentInfos, serverInfos, persistencyHandler, PaymentType.REQUEST_PAYMENT);
 		
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
@@ -499,6 +507,8 @@ public class PaymentRequestInitializerTest {
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
+		assertEquals(0, persistencyHandler.getList().size());
+		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
 		//TODO jeton: needed?
 //		verify(transceiver).disable(any(Activity.class));
@@ -543,7 +553,7 @@ public class PaymentRequestInitializerTest {
 		
 		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
-		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayee, paymentInfos, serverInfos, PaymentType.REQUEST_PAYMENT);
+		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayee, paymentInfos, serverInfos, persistencyHandler, PaymentType.REQUEST_PAYMENT);
 		
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
@@ -598,6 +608,8 @@ public class PaymentRequestInitializerTest {
 		
 		Thread.sleep(Config.SERVER_CALL_TIMEOUT+500);
 		
+		assertEquals(0, persistencyHandler.getList().size());
+		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
 		verify(transceiver).disable(any(Activity.class));
 		
@@ -634,7 +646,7 @@ public class PaymentRequestInitializerTest {
 		
 		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
-		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayer, paymentInfos, serverInfos, PaymentType.SEND_PAYMENT);
+		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayer, paymentInfos, serverInfos, persistencyHandler, PaymentType.SEND_PAYMENT);
 		
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
@@ -687,6 +699,8 @@ public class PaymentRequestInitializerTest {
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
+		assertEquals(0, persistencyHandler.getList().size());
+		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
 		//TODO jeton: needed?
 //		verify(transceiver).disable(any(Activity.class));
@@ -726,7 +740,7 @@ public class PaymentRequestInitializerTest {
 		
 		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
-		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayer, paymentInfos, serverInfos, PaymentType.SEND_PAYMENT);
+		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayer, paymentInfos, serverInfos, persistencyHandler, PaymentType.SEND_PAYMENT);
 		
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
@@ -779,6 +793,8 @@ public class PaymentRequestInitializerTest {
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
+		assertEquals(0, persistencyHandler.getList().size());
+		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
 		//TODO jeton: needed?
 //		verify(transceiver).disable(any(Activity.class));
@@ -823,7 +839,7 @@ public class PaymentRequestInitializerTest {
 		
 		NfcInitiator transceiver = mock(NfcInitiator.class);
 		
-		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayer, paymentInfos, serverInfos, PaymentType.SEND_PAYMENT);
+		pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfosPayer, paymentInfos, serverInfos, persistencyHandler, PaymentType.SEND_PAYMENT);
 		
 		Stubber stubber = doAnswer(new Answer<Integer>() {
 			@Override
@@ -874,6 +890,8 @@ public class PaymentRequestInitializerTest {
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		Thread.sleep(Config.SERVER_CALL_TIMEOUT+500);
+		
+		assertEquals(1, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
 		verify(transceiver).disable(any(Activity.class));

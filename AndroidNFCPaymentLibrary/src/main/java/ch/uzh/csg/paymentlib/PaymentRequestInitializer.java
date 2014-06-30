@@ -21,6 +21,8 @@ import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
 import ch.uzh.csg.paymentlib.exceptions.UnknownPaymentErrorException;
 import ch.uzh.csg.paymentlib.messages.PaymentError;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
+import ch.uzh.csg.paymentlib.persistency.IPersistencyHandler;
+import ch.uzh.csg.paymentlib.persistency.PersistedPaymentRequest;
 import ch.uzh.csg.paymentlib.util.Config;
 
 /**
@@ -41,6 +43,8 @@ import ch.uzh.csg.paymentlib.util.Config;
 public class PaymentRequestInitializer implements IServerResponseListener {
 	
 	//TODO jeton: offer disable() API to disable a view?
+	
+	//TODO jeton: do never call disable() on my own!
 	
 	public static final String TAG = "##NFC## PaymentRequestInitializer";
 	
@@ -63,11 +67,14 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	private UserInfos userInfos;
 	private ServerInfos serverInfos;
 	private PaymentInfos paymentInfos;
+	private IPersistencyHandler persistencyHandler;
 	
 	private volatile NfcInitiator nfcTransceiver;
 	private int nofMessages = 0;
 	private volatile boolean aborted = false;
 	private boolean disabled = false;
+	
+	private PersistedPaymentRequest persistedPaymentRequest;
 	
 	private Thread timeoutThread;
 	private volatile boolean serverResponseArrived = false;
@@ -88,6 +95,12 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	 *            the specific payment information
 	 * @param serverInfos
 	 *            the server information
+	 * @param persistencyHandler
+	 *            the object responsible for writing
+	 *            {@link PersistedPaymentRequest} to the device's local storage.
+	 *            This is needed to avoid unintended double transactions. This
+	 *            is only needed if {@link PaymentType} == SEND_PAYMENT.
+	 *            Otherwise you may pass null.
 	 * @param type
 	 *            the {@link PaymentType}
 	 * @throws IllegalArgumentException
@@ -95,8 +108,8 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	 * @throws NfcLibException
 	 *             if the underlying NFC feature cannot be used for any reason
 	 */
-	public PaymentRequestInitializer(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException,  NfcLibException {
-		this(activity, null, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
+	public PaymentRequestInitializer(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, IPersistencyHandler persistencyHandler, PaymentType type) throws IllegalArgumentException,  NfcLibException {
+		this(activity, null, paymentEventHandler, userInfos, paymentInfos, serverInfos, persistencyHandler, type);
 	}
 	
 	/*
@@ -104,8 +117,8 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	 * NfcTransceiver. For productive use the public constructor, otherwise the
 	 * NFC will not work.
 	 */
-	protected PaymentRequestInitializer(Activity activity, NfcInitiator nfcTransceiver, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException, NfcLibException {
-		checkParameters(activity, paymentEventHandler, userInfos, paymentInfos, serverInfos, type);
+	protected PaymentRequestInitializer(Activity activity, NfcInitiator nfcTransceiver, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, IPersistencyHandler persistencyHandler, PaymentType type) throws IllegalArgumentException, NfcLibException {
+		checkParameters(activity, paymentEventHandler, userInfos, paymentInfos, serverInfos, persistencyHandler, type);
 		
 		this.paymentType = type;
 		this.activity = activity;
@@ -113,11 +126,12 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		this.userInfos = userInfos;
 		this.serverInfos = serverInfos;
 		this.paymentInfos = paymentInfos;
+		this.persistencyHandler = persistencyHandler;
 		
 		initPayment(nfcTransceiver);
 	}
 
-	private void checkParameters(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, PaymentType type) throws IllegalArgumentException {
+	private void checkParameters(Activity activity, IPaymentEventHandler paymentEventHandler, UserInfos userInfos, PaymentInfos paymentInfos, ServerInfos serverInfos, IPersistencyHandler persistencyHandler, PaymentType type) throws IllegalArgumentException {
 		if (activity == null)
 			throw new IllegalArgumentException("The activity cannot be null.");
 		
@@ -135,6 +149,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		
 		if (type == null)
 			throw new IllegalArgumentException("The payment type cannot be null.");
+		
+		if (type == PaymentType.SEND_PAYMENT && persistencyHandler == null)
+			throw new IllegalArgumentException("The persistency handler cannot be null.");
 	}
 	
 	private void initPayment(NfcInitiator nfcTransceiver) throws NfcLibException {
@@ -320,6 +337,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				Log.d(TAG, "signature not valid");
 				sendError(PaymentError.UNEXPECTED_ERROR);
 			} else {
+				if (persistedPaymentRequest != null)
+					persistencyHandler.delete(persistedPaymentRequest);
+				
 				switch (toProcess.getStatus()) {
 				case FAILURE:
 					Log.d(TAG, "payment failure");
@@ -414,11 +434,37 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				
 				switch (nofMessages) {
 				case 1:
-					//TODO: load from/save to persisted payment request! avoid double spending problems!! see PaymentRequestHandler
 					String usernamePayee = new String(response.payload(), Charset.forName("UTF-8"));
+					
 					try {
-						PaymentRequest paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentInfos.getTimestamp());
+						PaymentRequest paymentRequestPayer = null;
+						
+						if (persistedPaymentRequest != null
+								&& persistedPaymentRequest.getUsername().equals(usernamePayee)
+								&& persistedPaymentRequest.getCurrency().getCode() == paymentInfos.getCurrency().getCode()
+								&& persistedPaymentRequest.getAmount() == paymentInfos.getAmount()) {
+							/*
+							 * this is a retry because the last try was not
+							 * successful (= no server response) or a payment
+							 * resume (the user took his device away to
+							 * accept/reject the payment)
+							 */
+							
+							paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), persistedPaymentRequest.getUsername(), persistedPaymentRequest.getCurrency(), persistedPaymentRequest.getAmount(), persistedPaymentRequest.getTimestamp());
+						} else {
+							// this is a new session
+							persistedPaymentRequest = persistencyHandler.getPersistedPaymentRequest(usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount());
+							if (persistedPaymentRequest == null) {
+								// this is a new payment request (not a payment request with a lost server response)
+								persistedPaymentRequest = new PersistedPaymentRequest(usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), System.currentTimeMillis());
+								persistencyHandler.add(persistedPaymentRequest);
+							}
+							
+							paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), persistedPaymentRequest.getTimestamp());
+						}
+						
 						paymentRequestPayer.sign(userInfos.getPrivateKey());
+						
 						ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer);
 						paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
 						

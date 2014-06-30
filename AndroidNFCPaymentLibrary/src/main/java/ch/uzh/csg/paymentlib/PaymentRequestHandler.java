@@ -75,7 +75,7 @@ public class PaymentRequestHandler {
 	 *            the object responsible for prompting the user if he accepts or
 	 *            rejects the payment and returning the answer
 	 * @param persistencyHandler
-	 *            the object responsible for writing
+	 *            the instance responsible for writing
 	 *            {@link PersistedPaymentRequest} to the device's local storage
 	 * @throws IllegalArgumentException
 	 *             if any paramter is not valid (e.g., null)
