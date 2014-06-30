@@ -31,7 +31,7 @@ If you want to import this library into your own project, there are three import
     <code>&lt;uses-feature android:name="android.hardware.nfc" android:required="true" /&gt;</code><br>  
     <code>&lt;uses-permission android:name="android.permission.NFC" /&gt;</code></pre>
     Inside the <code>&lt;application&gt;</code> tag add:<br>
-    <pre><code>&lt;service android:name="ch.uzh.csg.nfclib.CustomHostApduService" android:exported="true" android:permission="android.permission.BIND_NFC_SERVICE"&gt;<br>
+    <pre><code>&lt;service android:name="ch.uzh.csg.nfclib.HostApduServiceNfcLib" android:exported="true" android:permission="android.permission.BIND_NFC_SERVICE"&gt;<br>
   &lt;intent-filter&gt;<br>
     &lt;action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" /&gt;<br>
   &lt;/intent-filter&gt;<br>
