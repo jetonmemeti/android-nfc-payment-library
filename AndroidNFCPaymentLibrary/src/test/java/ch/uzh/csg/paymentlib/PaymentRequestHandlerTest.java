@@ -7,7 +7,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.security.KeyPair;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.junit.Before;
@@ -31,7 +30,6 @@ import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
-import ch.uzh.csg.mbps.customserialization.exceptions.UnknownCurrencyException;
 import ch.uzh.csg.nfclib.ISendLater;
 import ch.uzh.csg.nfclib.NfcEvent.Type;
 import ch.uzh.csg.paymentlib.PaymentRequestHandler.MessageHandler;
@@ -40,8 +38,7 @@ import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.messages.PaymentError;
 import ch.uzh.csg.paymentlib.messages.PaymentMessage;
-import ch.uzh.csg.paymentlib.persistency.IPersistencyHandler;
-import ch.uzh.csg.paymentlib.persistency.PersistedPaymentRequest;
+import ch.uzh.csg.paymentlib.testutils.PersistencyHandler;
 import ch.uzh.csg.paymentlib.testutils.TestUtils;
 import ch.uzh.csg.paymentlib.util.Config;
 
@@ -62,6 +59,8 @@ public class PaymentRequestHandlerTest {
 	private boolean paymentOtherEvent = false;
 	private Object paymentOtherEventObject = null;
 	private byte[] sendLaterBytes = null;
+	
+	private PersistencyHandler persistencyHandler = null;
 
 	private void reset() {
 		paymentError = false;
@@ -75,6 +74,7 @@ public class PaymentRequestHandlerTest {
 		paymentOtherEvent = false;
 		paymentOtherEventObject = null;
 		sendLaterBytes = null;
+		persistencyHandler = new PersistencyHandler();
 	}
 	
 	@Before
@@ -146,19 +146,6 @@ public class PaymentRequestHandlerTest {
 		}
 	};
 	
-	private IPersistencyHandler defaultPersistencyHandler = new IPersistencyHandler() {
-		@Override
-		public PersistedPaymentRequest getPersistedPaymentRequest(String username, Currency currency, long amount) {
-			return null;
-		}
-		@Override
-		public void add(PersistedPaymentRequest paymentRequest) {
-		}
-		@Override
-		public void delete(PersistedPaymentRequest paymentRequest) {
-		}
-	};
-	
 	private ISendLater sendLater = new ISendLater() {
 		@Override
 		public void sendLater(byte[] arg0) {
@@ -182,7 +169,7 @@ public class PaymentRequestHandlerTest {
 		UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, defaultPersistencyHandler);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
 		
 		// receive payment request
@@ -264,7 +251,7 @@ public class PaymentRequestHandlerTest {
 		UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, defaultPersistencyHandler);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
 		
 		// receive payment request
@@ -346,7 +333,7 @@ public class PaymentRequestHandlerTest {
 		UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, defaultPersistencyHandler);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
 		
 		// receive payment request
@@ -398,9 +385,7 @@ public class PaymentRequestHandlerTest {
 		UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
-		PersistencyHandler iph = new PersistencyHandler();
-		
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, iph);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
 		
 		// receive payment request
@@ -421,7 +406,7 @@ public class PaymentRequestHandlerTest {
 		assertEquals(paymentInfos.getCurrency().getCode(), paymentRequestPayer.getCurrency().getCode());
 		assertEquals(paymentInfos.getAmount(), paymentRequestPayer.getAmount());
 		
-		assertEquals(1, iph.getList().size());
+		assertEquals(1, persistencyHandler.getList().size());
 		
 		// receive payment response
 		PaymentRequest paymentRequestPayee = new PaymentRequest(userInfosPayee.getPKIAlgorithm(), userInfosPayee.getKeyNumber(), paymentRequestPayer.getUsernamePayer(), userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentRequestPayer.getTimestamp());
@@ -451,7 +436,7 @@ public class PaymentRequestHandlerTest {
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
-		assertEquals(0, iph.getList().size());
+		assertEquals(0, persistencyHandler.getList().size());
 		
 		assertFalse(paymentError);
 		assertNull(paymentErrorObject);
@@ -470,50 +455,6 @@ public class PaymentRequestHandlerTest {
 		assertEquals(userInfosPayee.getUsername(), pr1.getUsernamePayee());
 	}
 	
-	private class PersistencyHandler implements IPersistencyHandler {
-		private ArrayList<PersistedPaymentRequest> list = new ArrayList<PersistedPaymentRequest>();
-		
-		@Override
-		public PersistedPaymentRequest getPersistedPaymentRequest(String username, Currency currency, long amount) {
-			try {
-				for (PersistedPaymentRequest request : list) {
-					if (request.getUsername().equals(username) && request.getCurrency().getCode() == currency.getCode() && request.getAmount() == amount) {
-						return request;
-					}
-				}
-			} catch (UnknownCurrencyException e) {
-			}
-			return null;
-		}
-		@Override
-		public void add(PersistedPaymentRequest paymentRequest) {
-			boolean exists = false;
-			for (PersistedPaymentRequest request : list) {
-				if (request.equals(paymentRequest)) {
-					exists = true;
-					break;
-				}
-			}
-			if (!exists) {
-				list.add(paymentRequest);
-			}
-		}
-		@Override
-		public void delete(PersistedPaymentRequest paymentRequest) {
-			for (int i=0; i<list.size(); i++) {
-				PersistedPaymentRequest request = list.get(i);
-				if (request.equals(paymentRequest)) {
-					list.remove(i);
-					break;
-				}
-			}
-		}
-		
-		protected ArrayList<PersistedPaymentRequest> getList() {
-			return list;
-		}
-	};
-	
 	@Test
 	public void testPaymentRequestHandler_Payee_PayeeRemovesDevice() throws Exception {
 		/*
@@ -531,9 +472,7 @@ public class PaymentRequestHandlerTest {
 		UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 
-		PersistencyHandler iph = new PersistencyHandler();
-
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, iph);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
 
 		// receive payment request
@@ -553,7 +492,7 @@ public class PaymentRequestHandlerTest {
 		assertEquals(paymentInfos.getCurrency().getCode(), paymentRequestPayer.getCurrency().getCode());
 		assertEquals(paymentInfos.getAmount(), paymentRequestPayer.getAmount());
 
-		assertEquals(1, iph.getList().size());
+		assertEquals(1, persistencyHandler.getList().size());
 
 		// assume that the payer removes his device - on re-connect receive the same payment request again
 		prh.getNfcEventHandler().handleMessage(Type.CONNECTION_LOST, null);
@@ -571,7 +510,7 @@ public class PaymentRequestHandlerTest {
 		assertEquals(paymentInfos.getCurrency().getCode(), paymentRequestPayer.getCurrency().getCode());
 		assertEquals(paymentInfos.getAmount(), paymentRequestPayer.getAmount());
 
-		assertEquals(1, iph.getList().size());
+		assertEquals(1, persistencyHandler.getList().size());
 
 		// receive payment response
 		PaymentRequest paymentRequestPayee = new PaymentRequest(userInfosPayee.getPKIAlgorithm(), userInfosPayee.getKeyNumber(), paymentRequestPayer.getUsernamePayer(), userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentRequestPayer.getTimestamp());
@@ -600,7 +539,7 @@ public class PaymentRequestHandlerTest {
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 
-		assertEquals(0, iph.getList().size());
+		assertEquals(0, persistencyHandler.getList().size());
 		
 		assertFalse(paymentError);
 		assertNull(paymentErrorObject);
@@ -635,7 +574,7 @@ public class PaymentRequestHandlerTest {
 		UserInfos userInfosPayee = new UserInfos("payee", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayee, serverInfos, defaultUserPrompt, defaultPersistencyHandler);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayee, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
 		
 		// receive request to send username
@@ -706,7 +645,7 @@ public class PaymentRequestHandlerTest {
 		UserInfos userInfosPayee = new UserInfos("payee", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayee, serverInfos, defaultUserPrompt, defaultPersistencyHandler);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayee, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
 		
 		// receive request to send username
@@ -775,7 +714,7 @@ public class PaymentRequestHandlerTest {
 		KeyPair keyPairServer = TestUtils.generateKeyPair();
 		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
 		
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, defaultPersistencyHandler);
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
 		
 		// receive request to send username

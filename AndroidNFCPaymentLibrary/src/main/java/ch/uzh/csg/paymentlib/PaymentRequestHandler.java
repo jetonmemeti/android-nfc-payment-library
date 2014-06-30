@@ -297,7 +297,6 @@ public class PaymentRequestHandler {
 									} catch (Exception e) {
 										sendLater.sendLater(getError(PaymentError.UNEXPECTED_ERROR));
 									}
-									
 								}
 								
 								@Override
