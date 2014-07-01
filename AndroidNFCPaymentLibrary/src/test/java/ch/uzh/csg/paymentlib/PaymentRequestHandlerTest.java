@@ -92,13 +92,11 @@ public class PaymentRequestHandlerTest {
 	private IPaymentEventHandler paymentEventHandler = new IPaymentEventHandler() {
 		
 		@Override
-		public void handleMessage(PaymentEvent event, Object object) {
+		public void handleMessage(PaymentEvent event, Object object, IServerResponseListener caller) {
 			switch (event) {
 			case ERROR:
 				paymentError = true;
 				paymentErrorObject = object;
-				break;
-			case FORWARD_TO_SERVER:
 				break;
 			case NO_SERVER_RESPONSE:
 				paymentNoServerResponse = true;
@@ -108,24 +106,13 @@ public class PaymentRequestHandlerTest {
 				paymentSuccess = true;
 				paymentSuccessObject = object;
 				break;
-			default:
-				paymentOtherEvent = true;
-				paymentOtherEventObject = object;
-				break;
-			
-			}
-		}
-
-		@Override
-		public void handleMessage(PaymentEvent event, Object object, IServerResponseListener caller) {
-			switch (event) {
-			case ERROR:
-			case NO_SERVER_RESPONSE:
-			case SUCCESS:
-				break;
 			case FORWARD_TO_SERVER:
 				paymentForwardToServer = true;
 				paymentForwardToServerObject = object;
+				break;
+			default:
+				paymentOtherEvent = true;
+				paymentOtherEventObject = object;
 				break;
 			}
 		}

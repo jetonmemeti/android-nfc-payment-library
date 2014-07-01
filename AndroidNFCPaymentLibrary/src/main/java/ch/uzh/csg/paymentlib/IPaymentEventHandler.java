@@ -18,27 +18,19 @@ public interface IPaymentEventHandler {
 	 * Sends the {@link PaymentEvent} to the user and gives optional additional
 	 * information if the given {@link PaymentEvent} requires it.
 	 * 
+	 * If the event is PaymentEvent.FORWARD_TO_SERVER, the caller should not be
+	 * null. The caller can then be notified when the server response arrives.
+	 * 
 	 * @param event
 	 *            the {@link PaymentEvent} to propagate
 	 * @param object
-	 *            the optional data
-	 */
-	public void handleMessage(PaymentEvent event, Object object);
-	
-	/**
-	 * Sends the {@link PaymentEvent} to the user and gives optional additional
-	 * information if the given {@link PaymentEvent} requires it. This method is
-	 * only meant to be used with PaymentEvent.FORWARD_TO_SERVER. The caller can
-	 * then be notified when the server response arrives.
-	 * 
-	 * @param event
-	 *            the PaymentEvent.FORWARD_TO_SERVER
-	 * @param object
-	 *            the data to forward to the server
+	 *            the optional (based on the event) data
 	 * @param caller
 	 *            the {@link IServerResponseListener} to be notified when the
-	 *            server response arrives
+	 *            server response arrives, only if event ==
+	 *            PaymentEvent.FORWARD_TO_SERVER. Otherwise, this can be null
+	 *            and will not be used anyway.
 	 */
 	public void handleMessage(PaymentEvent event, Object object, IServerResponseListener caller);
-
+	
 }

@@ -174,7 +174,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	private void sendError(PaymentError err) {
 		aborted = true;
 		nfcTransceiver.transceive(new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes());
-		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
+		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err, null);
 	}
 	
 	/*
@@ -210,7 +210,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case INIT_FAILED:
 			case FATAL_ERROR:
 				aborted = true;
-				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
+				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null, null);
 				break;
 			case CONNECTION_LOST:
 				// abort timeout thread
@@ -243,7 +243,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 						}
 					}
 					
-					paymentEventHandler.handleMessage(PaymentEvent.ERROR, paymentError);
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, paymentError, null);
 					nfcTransceiver.disable(activity);
 					break;
 				}
@@ -289,7 +289,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				long now = System.currentTimeMillis();
 				if (now - startTime > Config.SERVER_CALL_TIMEOUT) {
 					aborted = true;
-					paymentEventHandler.handleMessage(PaymentEvent.NO_SERVER_RESPONSE, null);
+					paymentEventHandler.handleMessage(PaymentEvent.NO_SERVER_RESPONSE, null, null);
 					PaymentMessage pm = new PaymentMessage().error().payload(new byte[] { PaymentError.NO_SERVER_RESPONSE.getCode() });
 					nfcTransceiver.transceive(pm.bytes());
 					break;
@@ -343,15 +343,15 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				switch (toProcess.getStatus()) {
 				case FAILURE:
 					Log.d(TAG, "payment failure");
-					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED);
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
 					break;
 				case SUCCESS:
 					Log.d(TAG, "payment success");
-					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, toProcess);
+					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, toProcess, null);
 					break;
 				case DUPLICATE_REQUEST:
 					Log.d(TAG, "payment duplicate");
-					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST);
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST, null);
 					break;
 				}
 				
@@ -394,7 +394,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case INIT_FAILED:
 			case FATAL_ERROR:
 				aborted = true;
-				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
+				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null, null);
 				break;
 			case CONNECTION_LOST:
 				// abort timeout thread
@@ -427,7 +427,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 						}
 					}
 					
-					paymentEventHandler.handleMessage(PaymentEvent.ERROR, paymentError);
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, paymentError, null);
 					//nfcTransceiver.disable(activity);
 					break;
 				}

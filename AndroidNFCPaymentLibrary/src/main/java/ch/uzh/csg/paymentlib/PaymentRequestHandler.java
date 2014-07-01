@@ -122,7 +122,7 @@ public class PaymentRequestHandler {
 			switch (event) {
 			case INIT_FAILED:
 			case FATAL_ERROR:
-				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null);
+				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null, null);
 				break;
 			case CONNECTION_LOST:
 				// abort timeout thread
@@ -143,7 +143,7 @@ public class PaymentRequestHandler {
 	
 	private byte[] getError(PaymentError err) {
 		messageHandler.resetState();
-		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err);
+		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err, null);
 		return new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes();
 	}
 	
@@ -214,13 +214,13 @@ public class PaymentRequestHandler {
 							
 							switch (paymentResponse.getStatus()) {
 							case FAILURE:
-								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED);
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
 								break;
 							case SUCCESS:
-								paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse);
+								paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse, null);
 								break;
 							case DUPLICATE_REQUEST:
-								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST);
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST, null);
 								break;
 							}
 							
@@ -327,13 +327,13 @@ public class PaymentRequestHandler {
 							resetState();
 							switch (paymentResponse.getStatus()) {
 							case FAILURE:
-								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED);
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
 								break;
 							case SUCCESS:
-								paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse);
+								paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse, null);
 								break;
 							case DUPLICATE_REQUEST:
-								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST);
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST, null);
 								break;
 							}
 							
@@ -357,7 +357,7 @@ public class PaymentRequestHandler {
 				while (!serverResponseArrived) {
 					long now = System.currentTimeMillis();
 					if (now - startTime > Config.SERVER_RESPONSE_TIMEOUT) {
-						paymentEventHandler.handleMessage(PaymentEvent.NO_SERVER_RESPONSE, null);
+						paymentEventHandler.handleMessage(PaymentEvent.NO_SERVER_RESPONSE, null, null);
 						break;
 					}
 					try {

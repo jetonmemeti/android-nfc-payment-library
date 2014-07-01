@@ -95,13 +95,11 @@ public class PaymentRequestInitializerTest {
 	private IPaymentEventHandler paymentEventHandler = new IPaymentEventHandler() {
 		
 		@Override
-		public void handleMessage(PaymentEvent event, Object object) {
+		public void handleMessage(PaymentEvent event, Object object, IServerResponseListener caller) {
 			switch (event) {
 			case ERROR:
 				paymentError = true;
 				paymentErrorObject = object;
-				break;
-			case FORWARD_TO_SERVER:
 				break;
 			case NO_SERVER_RESPONSE:
 				paymentServerResponseTimeout = true;
@@ -110,20 +108,6 @@ public class PaymentRequestInitializerTest {
 			case SUCCESS:
 				paymentSuccess = true;
 				paymentSuccessObject = object;
-				break;
-			default:
-				paymentOtherEvent = true;
-				paymentOtherEventObject = object;
-				break;
-			}
-		}
-
-		@Override
-		public void handleMessage(PaymentEvent event, Object object, IServerResponseListener caller) {
-			switch (event) {
-			case ERROR:
-			case NO_SERVER_RESPONSE:
-			case SUCCESS:
 				break;
 			case FORWARD_TO_SERVER:
 				if (serverTimeout) {
@@ -162,6 +146,10 @@ public class PaymentRequestInitializerTest {
 						assertTrue(false);
 					}
 				}
+				break;
+			default:
+				paymentOtherEvent = true;
+				paymentOtherEventObject = object;
 				break;
 			}
 		}
