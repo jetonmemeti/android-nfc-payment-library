@@ -356,7 +356,7 @@ public class PaymentRequestHandler {
 				while (!serverResponseArrived) {
 					long now = System.currentTimeMillis();
 					if (now - startTime > Config.SERVER_RESPONSE_TIMEOUT) {
-						paymentEventHandler.handleMessage(PaymentEvent.NO_SERVER_RESPONSE, null, null);
+						paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.NO_SERVER_RESPONSE, null);
 						break;
 					}
 					try {

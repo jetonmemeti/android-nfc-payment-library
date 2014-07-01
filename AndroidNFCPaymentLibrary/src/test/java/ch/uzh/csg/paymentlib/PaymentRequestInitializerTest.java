@@ -3,7 +3,6 @@ package ch.uzh.csg.paymentlib;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -205,7 +204,7 @@ public class PaymentRequestInitializerTest {
 		assertNotNull(state.object);
 		assertTrue(state.object instanceof PaymentError);
 		PaymentError err = (PaymentError) state.object;
-		assertEquals(PaymentError.PAYER_REFUSED.getCode(), err.getCode());
+		assertEquals(PaymentError.PAYER_REFUSED, err);
 	}
 	
 	@Test
@@ -292,7 +291,7 @@ public class PaymentRequestInitializerTest {
 		assertNotNull(state.object);
 		assertTrue(state.object instanceof PaymentError);
 		PaymentError err = (PaymentError) state.object;
-		assertEquals(PaymentError.REQUESTS_NOT_IDENTIC.getCode(), err.getCode());
+		assertEquals(PaymentError.REQUESTS_NOT_IDENTIC, err);
 	}
 	
 	@Test
@@ -346,7 +345,7 @@ public class PaymentRequestInitializerTest {
 				
 				PaymentResponse pr = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 				assertNotNull(pr);
-				assertEquals(ServerResponseStatus.FAILURE.getCode(), pr.getStatus().getCode());
+				assertEquals(ServerResponseStatus.FAILURE, pr.getStatus());
 				
 				byte[] response = new PaymentMessage().payload(PaymentRequestHandler.ACK).bytes();
 				assertNotNull(response);
@@ -386,7 +385,7 @@ public class PaymentRequestInitializerTest {
 		assertEquals(PaymentEvent.ERROR, state.event);
 		assertTrue(state.object instanceof PaymentError);
 		PaymentError err = (PaymentError) state.object;
-		assertEquals(PaymentError.SERVER_REFUSED.getCode(), err.getCode());
+		assertEquals(PaymentError.SERVER_REFUSED, err);
 	}
 	
 	@Test
@@ -440,7 +439,7 @@ public class PaymentRequestInitializerTest {
 				
 				PaymentResponse pr = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 				assertNotNull(pr);
-				assertEquals(ServerResponseStatus.SUCCESS.getCode(), pr.getStatus().getCode());
+				assertEquals(ServerResponseStatus.SUCCESS, pr.getStatus());
 				
 				byte[] response = new PaymentMessage().payload(PaymentRequestHandler.ACK).bytes();
 				assertNotNull(response);
@@ -575,8 +574,11 @@ public class PaymentRequestInitializerTest {
 		assertEquals(PaymentEvent.FORWARD_TO_SERVER, state.event);
 		assertNotNull(state.object);
 		state = states.get(2);
-		assertEquals(PaymentEvent.NO_SERVER_RESPONSE, state.event);
-		assertNull(state.object);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentError);
+		PaymentError err = (PaymentError) state.object;
+		assertEquals(PaymentError.NO_SERVER_RESPONSE, err);
 	}
 	
 	@Test
@@ -628,7 +630,7 @@ public class PaymentRequestInitializerTest {
 				
 				PaymentResponse pr = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 				assertNotNull(pr);
-				assertEquals(ServerResponseStatus.FAILURE.getCode(), pr.getStatus().getCode());
+				assertEquals(ServerResponseStatus.FAILURE, pr.getStatus());
 				
 				byte[] response = new PaymentMessage().payload(PaymentRequestHandler.ACK).bytes();
 				assertNotNull(response);
@@ -669,7 +671,7 @@ public class PaymentRequestInitializerTest {
 		assertNotNull(state.object);
 		assertTrue(state.object instanceof PaymentError);
 		PaymentError err = (PaymentError) state.object;
-		assertEquals(PaymentError.SERVER_REFUSED.getCode(), err.getCode());
+		assertEquals(PaymentError.SERVER_REFUSED, err);
 	}
 	
 	@Test
@@ -721,7 +723,7 @@ public class PaymentRequestInitializerTest {
 				
 				PaymentResponse pr = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 				assertNotNull(pr);
-				assertEquals(ServerResponseStatus.SUCCESS.getCode(), pr.getStatus().getCode());
+				assertEquals(ServerResponseStatus.SUCCESS, pr.getStatus());
 				
 				byte[] response = new PaymentMessage().payload(PaymentRequestHandler.ACK).bytes();
 				assertNotNull(response);
@@ -854,8 +856,11 @@ public class PaymentRequestInitializerTest {
 		assertEquals(PaymentEvent.FORWARD_TO_SERVER, state.event);
 		assertNotNull(state.object);
 		state = states.get(2);
-		assertEquals(PaymentEvent.NO_SERVER_RESPONSE, state.event);
-		assertNull(state.object);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentError);
+		PaymentError err = (PaymentError) state.object;
+		assertEquals(PaymentError.NO_SERVER_RESPONSE, err);
 	}
 	
 }

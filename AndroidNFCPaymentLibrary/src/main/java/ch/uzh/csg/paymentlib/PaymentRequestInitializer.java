@@ -290,7 +290,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				long now = System.currentTimeMillis();
 				if (now - startTime > Config.SERVER_CALL_TIMEOUT) {
 					aborted = true;
-					paymentEventHandler.handleMessage(PaymentEvent.NO_SERVER_RESPONSE, null, null);
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.NO_SERVER_RESPONSE, null);
 					PaymentMessage pm = new PaymentMessage().error().payload(new byte[] { PaymentError.NO_SERVER_RESPONSE.getCode() });
 					nfcTransceiver.transceive(pm.bytes());
 					break;

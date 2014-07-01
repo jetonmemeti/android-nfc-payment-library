@@ -19,7 +19,7 @@ public enum PaymentError {
 	SERVER_REFUSED((byte) 0x02),
 	REQUESTS_NOT_IDENTIC((byte) 0x03),
 	DUPLICATE_REQUEST((byte) 0x04),
-	NO_SERVER_RESPONSE((byte) 0x05),
+	NO_SERVER_RESPONSE((byte) 0x05), //when no server response received (neither ok nor nok) --> show on gui
 	UNEXPECTED_ERROR((byte) 0x06);
 	
 	private byte code;

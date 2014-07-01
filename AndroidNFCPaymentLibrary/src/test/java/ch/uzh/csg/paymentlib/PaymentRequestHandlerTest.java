@@ -189,7 +189,7 @@ public class PaymentRequestHandlerTest {
 		assertNotNull(state.object);
 		assertTrue(state.object instanceof PaymentError);
 		PaymentError err = (PaymentError) state.object;
-		assertEquals(PaymentError.SERVER_REFUSED.getCode(), err.getCode());
+		assertEquals(PaymentError.SERVER_REFUSED, err);
 	}
 	
 	@Test
@@ -314,8 +314,11 @@ public class PaymentRequestHandlerTest {
 		State state = states.get(0);
 		assertEquals(PaymentEvent.INITIALIZED, state.event);
 		state = states.get(1);
-		assertEquals(PaymentEvent.NO_SERVER_RESPONSE, state.event);
-		assertNull(state.object);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentError);
+		PaymentError err = (PaymentError) state.object;
+		assertEquals(PaymentError.NO_SERVER_RESPONSE, err);
 	}
 	
 	@Test
@@ -566,7 +569,7 @@ public class PaymentRequestHandlerTest {
 		assertNotNull(state.object);
 		assertTrue(state.object instanceof PaymentError);
 		PaymentError err = (PaymentError) state.object;
-		assertEquals(PaymentError.SERVER_REFUSED.getCode(), err.getCode());
+		assertEquals(PaymentError.SERVER_REFUSED, err);
 	}
 	
 	@Test
@@ -670,8 +673,11 @@ public class PaymentRequestHandlerTest {
 		State state = states.get(0);
 		assertEquals(PaymentEvent.INITIALIZED, state.event);
 		state = states.get(1);
-		assertEquals(PaymentEvent.NO_SERVER_RESPONSE, state.event);
-		assertNull(state.object);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentError);
+		PaymentError err = (PaymentError) state.object;
+		assertEquals(PaymentError.NO_SERVER_RESPONSE, err);
 	}
 	
 }
