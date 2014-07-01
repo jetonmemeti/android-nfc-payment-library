@@ -1,13 +1,14 @@
 package ch.uzh.csg.paymentlib;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.security.KeyPair;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -48,33 +49,27 @@ public class PaymentRequestHandlerTest {
 	
 	private Activity hostActivity = Mockito.mock(Activity.class);
 	
-	private boolean paymentError = false;
-	private Object paymentErrorObject = null;
-	private boolean paymentForwardToServer = false;
-	private Object paymentForwardToServerObject = null;
-	private boolean paymentNoServerResponse = false;
-	private Object paymentNoServerResponseObject = null;
-	private boolean paymentSuccess = false;
-	private Object paymentSuccessObject = null;
-	private boolean paymentOtherEvent = false;
-	private Object paymentOtherEventObject = null;
-	private byte[] sendLaterBytes = null;
+	private class State {
+		private PaymentEvent event;
+		private Object object;
+		@SuppressWarnings("unused")
+		private IServerResponseListener caller;
+		
+		private State(PaymentEvent event, Object object, IServerResponseListener caller) {
+			this.event = event;
+			this.object = object;
+			this.caller = caller;
+		}
+	}
 	
+	private List<State> states = new ArrayList<State>();
 	private PersistencyHandler persistencyHandler = null;
+	private byte[] sendLaterBytes = null;
 
 	private void reset() {
-		paymentError = false;
-		paymentErrorObject = null;
-		paymentForwardToServer = false;
-		paymentForwardToServerObject = null;
-		paymentNoServerResponse = false;
-		paymentNoServerResponseObject = null;
-		paymentSuccess = false;
-		paymentSuccessObject = null;
-		paymentOtherEvent = false;
-		paymentOtherEventObject = null;
-		sendLaterBytes = null;
+		states.clear();
 		persistencyHandler = new PersistencyHandler();
+		sendLaterBytes = null;
 	}
 	
 	@Before
@@ -90,31 +85,9 @@ public class PaymentRequestHandlerTest {
 	}
 	
 	private IPaymentEventHandler paymentEventHandler = new IPaymentEventHandler() {
-		
 		@Override
 		public void handleMessage(PaymentEvent event, Object object, IServerResponseListener caller) {
-			switch (event) {
-			case ERROR:
-				paymentError = true;
-				paymentErrorObject = object;
-				break;
-			case NO_SERVER_RESPONSE:
-				paymentNoServerResponse = true;
-				paymentNoServerResponseObject = object;
-				break;
-			case SUCCESS:
-				paymentSuccess = true;
-				paymentSuccessObject = object;
-				break;
-			case FORWARD_TO_SERVER:
-				paymentForwardToServer = true;
-				paymentForwardToServerObject = object;
-				break;
-			default:
-				paymentOtherEvent = true;
-				paymentOtherEventObject = object;
-				break;
-			}
+			states.add(new State(event, object, caller));
 		}
 	};
 	
@@ -158,6 +131,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
+		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		// receive payment request
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -207,18 +181,14 @@ public class PaymentRequestHandlerTest {
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
-		assertFalse(paymentForwardToServer);
-		assertNull(paymentForwardToServerObject);
-		assertFalse(paymentNoServerResponse);
-		assertNull(paymentNoServerResponseObject);
-		assertFalse(paymentSuccess);
-		assertNull(paymentSuccessObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		
-		assertTrue(paymentError);
-		assertTrue(paymentErrorObject instanceof PaymentError);
-		PaymentError err = (PaymentError) paymentErrorObject;
+		assertEquals(2, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentError);
+		PaymentError err = (PaymentError) state.object;
 		assertEquals(PaymentError.SERVER_REFUSED.getCode(), err.getCode());
 	}
 	
@@ -240,6 +210,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
+		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		// receive payment request
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -287,19 +258,14 @@ public class PaymentRequestHandlerTest {
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
-		assertFalse(paymentError);
-		assertNull(paymentErrorObject);
-		assertFalse(paymentForwardToServer);
-		assertNull(paymentForwardToServerObject);
-		assertFalse(paymentNoServerResponse);
-		assertNull(paymentNoServerResponseObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		
-		assertTrue(paymentSuccess);
-		assertNotNull(paymentSuccessObject);
-		assertTrue(paymentSuccessObject instanceof PaymentResponse);
-		PaymentResponse pr1 = (PaymentResponse) paymentSuccessObject;
+		assertEquals(2, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.SUCCESS, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentResponse);
+		PaymentResponse pr1 = (PaymentResponse) state.object;
 		assertEquals(userInfosPayer.getUsername(), pr1.getUsernamePayer());
 		assertEquals(userInfosPayee.getUsername(), pr1.getUsernamePayee());
 	}
@@ -322,6 +288,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
+		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		// receive payment request
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -343,17 +310,12 @@ public class PaymentRequestHandlerTest {
 		
 		Thread.sleep(Config.SERVER_RESPONSE_TIMEOUT+500);
 		
-		assertFalse(paymentError);
-		assertNull(paymentErrorObject);
-		assertFalse(paymentForwardToServer);
-		assertNull(paymentForwardToServerObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		assertFalse(paymentSuccess);
-		assertNull(paymentSuccessObject);
-		
-		assertTrue(paymentNoServerResponse);
-		assertNull(paymentNoServerResponseObject);
+		assertEquals(2, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.NO_SERVER_RESPONSE, state.event);
+		assertNull(state.object);
 	}
 	
 	@Test
@@ -374,6 +336,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
+		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		// receive payment request
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -425,19 +388,14 @@ public class PaymentRequestHandlerTest {
 		
 		assertEquals(0, persistencyHandler.getList().size());
 		
-		assertFalse(paymentError);
-		assertNull(paymentErrorObject);
-		assertFalse(paymentForwardToServer);
-		assertNull(paymentForwardToServerObject);
-		assertFalse(paymentNoServerResponse);
-		assertNull(paymentNoServerResponseObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		
-		assertTrue(paymentSuccess);
-		assertNotNull(paymentSuccessObject);
-		assertTrue(paymentSuccessObject instanceof PaymentResponse);
-		PaymentResponse pr1 = (PaymentResponse) paymentSuccessObject;
+		assertEquals(2, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.SUCCESS, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentResponse);
+		PaymentResponse pr1 = (PaymentResponse) state.object;
 		assertEquals(userInfosPayer.getUsername(), pr1.getUsernamePayer());
 		assertEquals(userInfosPayee.getUsername(), pr1.getUsernamePayee());
 	}
@@ -461,6 +419,7 @@ public class PaymentRequestHandlerTest {
 
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
+		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 
 		// receive payment request
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -528,19 +487,16 @@ public class PaymentRequestHandlerTest {
 
 		assertEquals(0, persistencyHandler.getList().size());
 		
-		assertFalse(paymentError);
-		assertNull(paymentErrorObject);
-		assertFalse(paymentForwardToServer);
-		assertNull(paymentForwardToServerObject);
-		assertFalse(paymentNoServerResponse);
-		assertNull(paymentNoServerResponseObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-
-		assertTrue(paymentSuccess);
-		assertNotNull(paymentSuccessObject);
-		assertTrue(paymentSuccessObject instanceof PaymentResponse);
-		PaymentResponse pr1 = (PaymentResponse) paymentSuccessObject;
+		assertEquals(3, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(2);
+		assertEquals(PaymentEvent.SUCCESS, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentResponse);
+		PaymentResponse pr1 = (PaymentResponse) state.object;
 		assertEquals(userInfosPayer.getUsername(), pr1.getUsernamePayer());
 		assertEquals(userInfosPayee.getUsername(), pr1.getUsernamePayee());
 	}
@@ -563,6 +519,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayee, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
+		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		// receive request to send username
 		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });
@@ -601,18 +558,14 @@ public class PaymentRequestHandlerTest {
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
-		assertFalse(paymentForwardToServer);
-		assertNull(paymentForwardToServerObject);
-		assertFalse(paymentNoServerResponse);
-		assertNull(paymentNoServerResponseObject);
-		assertFalse(paymentSuccess);
-		assertNull(paymentSuccessObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		
-		assertTrue(paymentError);
-		assertTrue(paymentErrorObject instanceof PaymentError);
-		PaymentError err = (PaymentError) paymentErrorObject;
+		assertEquals(2, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentError);
+		PaymentError err = (PaymentError) state.object;
 		assertEquals(PaymentError.SERVER_REFUSED.getCode(), err.getCode());
 	}
 	
@@ -634,6 +587,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayee, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
+		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		// receive request to send username
 		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });
@@ -671,19 +625,14 @@ public class PaymentRequestHandlerTest {
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
-		assertFalse(paymentError);
-		assertNull(paymentErrorObject);
-		assertFalse(paymentForwardToServer);
-		assertNull(paymentForwardToServerObject);
-		assertFalse(paymentNoServerResponse);
-		assertNull(paymentNoServerResponseObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		
-		assertTrue(paymentSuccess);
-		assertNotNull(paymentSuccessObject);
-		assertTrue(paymentSuccessObject instanceof PaymentResponse);
-		PaymentResponse pr1 = (PaymentResponse) paymentSuccessObject;
+		assertEquals(2, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.SUCCESS, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentResponse);
+		PaymentResponse pr1 = (PaymentResponse) state.object;
 		assertEquals(userInfosPayer.getUsername(), pr1.getUsernamePayer());
 		assertEquals(userInfosPayee.getUsername(), pr1.getUsernamePayee());
 	}
@@ -703,6 +652,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
+		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		// receive request to send username
 		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });
@@ -716,17 +666,12 @@ public class PaymentRequestHandlerTest {
 		
 		Thread.sleep(Config.SERVER_RESPONSE_TIMEOUT+500);
 		
-		assertFalse(paymentError);
-		assertNull(paymentErrorObject);
-		assertFalse(paymentForwardToServer);
-		assertNull(paymentForwardToServerObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		assertFalse(paymentSuccess);
-		assertNull(paymentSuccessObject);
-		
-		assertTrue(paymentNoServerResponse);
-		assertNull(paymentNoServerResponseObject);
+		assertEquals(2, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.NO_SERVER_RESPONSE, state.event);
+		assertNull(state.object);
 	}
 	
 }

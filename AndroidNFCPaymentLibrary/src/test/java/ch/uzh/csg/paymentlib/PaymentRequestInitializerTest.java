@@ -13,7 +13,9 @@ import static org.mockito.Mockito.verify;
 
 import java.nio.charset.Charset;
 import java.security.KeyPair;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -55,17 +57,20 @@ public class PaymentRequestInitializerTest {
 	
 	private Activity hostActivity = Mockito.mock(Activity.class);
 	
-	private boolean paymentError = false;
-	private Object paymentErrorObject = null;
-	private boolean paymentForwardToServer = false;
-	private Object paymentForwardToServerObject = null;
-	private boolean paymentServerResponseTimeout = false;
-	private Object paymentServerResponseTimeoutObject = null;
-	private boolean paymentSuccess = false;
-	private Object paymentSuccessObject = null;
-	private boolean paymentOtherEvent = false;
-	private Object paymentOtherEventObject = null;
+	private class State {
+		private PaymentEvent event;
+		private Object object;
+		@SuppressWarnings("unused")
+		private IServerResponseListener caller;
+		
+		private State(PaymentEvent event, Object object, IServerResponseListener caller) {
+			this.event = event;
+			this.object = object;
+			this.caller = caller;
+		}
+	}
 	
+	private List<State> states = new ArrayList<State>();
 	private PersistencyHandler persistencyHandler;
 	
 	private KeyPair keyPairServer;
@@ -75,17 +80,7 @@ public class PaymentRequestInitializerTest {
 	private boolean serverTimeout;
 	
 	private void reset() {
-		paymentError = false;
-		paymentErrorObject = null;
-		paymentForwardToServer = false;
-		paymentForwardToServerObject = null;
-		paymentServerResponseTimeout = false;
-		paymentServerResponseTimeoutObject = null;
-		paymentSuccess = false;
-		paymentSuccessObject = null;
-		paymentOtherEvent = false;
-		paymentOtherEventObject = null;
-		
+		states.clear();
 		persistencyHandler = new PersistencyHandler();
 		
 		serverRefuse = false;
@@ -96,30 +91,17 @@ public class PaymentRequestInitializerTest {
 		
 		@Override
 		public void handleMessage(PaymentEvent event, Object object, IServerResponseListener caller) {
-			switch (event) {
-			case ERROR:
-				paymentError = true;
-				paymentErrorObject = object;
-				break;
-			case NO_SERVER_RESPONSE:
-				paymentServerResponseTimeout = true;
-				paymentServerResponseTimeoutObject = object;
-				break;
-			case SUCCESS:
-				paymentSuccess = true;
-				paymentSuccessObject = object;
-				break;
-			case FORWARD_TO_SERVER:
+			states.add(new State(event, object, caller));
+			
+			if (event == PaymentEvent.FORWARD_TO_SERVER) {
 				if (serverTimeout) {
 					try {
 						Thread.sleep(Config.SERVER_CALL_TIMEOUT+100);
 					} catch (InterruptedException e) {
 					}
-					break;
+					return;
 				}
 				
-				paymentForwardToServer = true;
-				paymentForwardToServerObject = object;
 				if (serverRefuse) {
 					try {
 						assertTrue(object instanceof byte[]);
@@ -146,11 +128,6 @@ public class PaymentRequestInitializerTest {
 						assertTrue(false);
 					}
 				}
-				break;
-			default:
-				paymentOtherEvent = true;
-				paymentOtherEventObject = object;
-				break;
 			}
 		}
 	};
@@ -217,20 +194,17 @@ public class PaymentRequestInitializerTest {
 		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver).transceive(any(byte[].class));
+		//TODO: what about?
 		verify(transceiver).disable(any(Activity.class));
 		
-		assertFalse(paymentForwardToServer);
-		assertNull(paymentForwardToServerObject);
-		assertFalse(paymentServerResponseTimeout);
-		assertNull(paymentServerResponseTimeoutObject);
-		assertFalse(paymentSuccess);
-		assertNull(paymentSuccessObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		
-		assertTrue(paymentError);
-		assertTrue(paymentErrorObject instanceof PaymentError);
-		PaymentError err = (PaymentError) paymentErrorObject;
+		assertEquals(2, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentError);
+		PaymentError err = (PaymentError) state.object;
 		assertEquals(PaymentError.PAYER_REFUSED.getCode(), err.getCode());
 	}
 	
@@ -307,20 +281,17 @@ public class PaymentRequestInitializerTest {
 		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
+		//TODO: what about?
 		verify(transceiver).disable(any(Activity.class));
 		
-		assertFalse(paymentForwardToServer);
-		assertNull(paymentForwardToServerObject);
-		assertFalse(paymentServerResponseTimeout);
-		assertNull(paymentServerResponseTimeoutObject);
-		assertFalse(paymentSuccess);
-		assertNull(paymentSuccessObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		
-		assertTrue(paymentError);
-		assertTrue(paymentErrorObject instanceof PaymentError);
-		PaymentError err = (PaymentError) paymentErrorObject;
+		assertEquals(2, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentError);
+		PaymentError err = (PaymentError) state.object;
 		assertEquals(PaymentError.REQUESTS_NOT_IDENTIC.getCode(), err.getCode());
 	}
 	
@@ -405,18 +376,16 @@ public class PaymentRequestInitializerTest {
 		//TODO jeton: needed?
 //		verify(transceiver).disable(any(Activity.class));
 		
-		assertFalse(paymentServerResponseTimeout);
-		assertNull(paymentServerResponseTimeoutObject);
-		assertFalse(paymentSuccess);
-		assertNull(paymentSuccessObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		
-		assertTrue(paymentForwardToServer);
-		assertNotNull(paymentForwardToServerObject);
-		assertTrue(paymentError);
-		assertTrue(paymentErrorObject instanceof PaymentError);
-		PaymentError err = (PaymentError) paymentErrorObject;
+		assertEquals(3, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.FORWARD_TO_SERVER, state.event);
+		assertNotNull(state.object);
+		state = states.get(2);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertTrue(state.object instanceof PaymentError);
+		PaymentError err = (PaymentError) state.object;
 		assertEquals(PaymentError.SERVER_REFUSED.getCode(), err.getCode());
 	}
 	
@@ -504,19 +473,16 @@ public class PaymentRequestInitializerTest {
 		//assure that the timeout is not thrown
 		Thread.sleep(Config.SERVER_CALL_TIMEOUT+500);
 		
-		assertFalse(paymentServerResponseTimeout);
-		assertNull(paymentServerResponseTimeoutObject);
-		assertFalse(paymentError);
-		assertNull(paymentErrorObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		
-		assertTrue(paymentForwardToServer);
-		assertNotNull(paymentForwardToServerObject);
-		assertTrue(paymentSuccess);
-		assertNotNull(paymentSuccessObject);
-		assertTrue(paymentSuccessObject instanceof PaymentResponse);
-		PaymentResponse pr = (PaymentResponse) paymentSuccessObject;
+		assertEquals(3, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.FORWARD_TO_SERVER, state.event);
+		assertNotNull(state.object);
+		state = states.get(2);
+		assertEquals(PaymentEvent.SUCCESS, state.event);
+		assertTrue(state.object instanceof PaymentResponse);
+		PaymentResponse pr = (PaymentResponse) state.object;
 		assertEquals(userInfosPayer.getUsername(), pr.getUsernamePayer());
 		assertEquals(userInfosPayee.getUsername(), pr.getUsernamePayee());
 	}
@@ -599,19 +565,18 @@ public class PaymentRequestInitializerTest {
 		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
+		//TODO: what about?	
 		verify(transceiver).disable(any(Activity.class));
 		
-		assertFalse(paymentError);
-		assertNull(paymentErrorObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		assertFalse(paymentForwardToServer);
-		assertNull(paymentForwardToServerObject);
-		assertFalse(paymentSuccess);
-		assertNull(paymentSuccessObject);
-		
-		assertTrue(paymentServerResponseTimeout);
-		assertNull(paymentServerResponseTimeoutObject);
+		assertEquals(3, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.FORWARD_TO_SERVER, state.event);
+		assertNotNull(state.object);
+		state = states.get(2);
+		assertEquals(PaymentEvent.NO_SERVER_RESPONSE, state.event);
+		assertNull(state.object);
 	}
 	
 	@Test
@@ -693,18 +658,17 @@ public class PaymentRequestInitializerTest {
 		//TODO jeton: needed?
 //		verify(transceiver).disable(any(Activity.class));
 		
-		assertFalse(paymentServerResponseTimeout);
-		assertNull(paymentServerResponseTimeoutObject);
-		assertFalse(paymentSuccess);
-		assertNull(paymentSuccessObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		
-		assertTrue(paymentForwardToServer);
-		assertNotNull(paymentForwardToServerObject);
-		assertTrue(paymentError);
-		assertTrue(paymentErrorObject instanceof PaymentError);
-		PaymentError err = (PaymentError) paymentErrorObject;
+		assertEquals(3, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.FORWARD_TO_SERVER, state.event);
+		assertNotNull(state.object);
+		state = states.get(2);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentError);
+		PaymentError err = (PaymentError) state.object;
 		assertEquals(PaymentError.SERVER_REFUSED.getCode(), err.getCode());
 	}
 	
@@ -790,19 +754,17 @@ public class PaymentRequestInitializerTest {
 		//assure that the timeout is not thrown
 		Thread.sleep(Config.SERVER_CALL_TIMEOUT+500);
 		
-		assertFalse(paymentServerResponseTimeout);
-		assertNull(paymentServerResponseTimeoutObject);
-		assertFalse(paymentError);
-		assertNull(paymentErrorObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		
-		assertTrue(paymentForwardToServer);
-		assertNotNull(paymentForwardToServerObject);
-		assertTrue(paymentSuccess);
-		assertNotNull(paymentSuccessObject);
-		assertTrue(paymentSuccessObject instanceof PaymentResponse);
-		PaymentResponse pr = (PaymentResponse) paymentSuccessObject;
+		assertEquals(3, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.FORWARD_TO_SERVER, state.event);
+		assertNotNull(state.object);
+		state = states.get(2);
+		assertEquals(PaymentEvent.SUCCESS, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentResponse);
+		PaymentResponse pr = (PaymentResponse) state.object;
 		assertEquals(userInfosPayer.getUsername(), pr.getUsernamePayer());
 		assertEquals(userInfosPayee.getUsername(), pr.getUsernamePayee());
 	}
@@ -882,19 +844,18 @@ public class PaymentRequestInitializerTest {
 		assertEquals(1, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
+		//TODO: what about?	
 		verify(transceiver).disable(any(Activity.class));
 		
-		assertFalse(paymentError);
-		assertNull(paymentErrorObject);
-		assertFalse(paymentOtherEvent);
-		assertNull(paymentOtherEventObject);
-		assertFalse(paymentForwardToServer);
-		assertNull(paymentForwardToServerObject);
-		assertFalse(paymentSuccess);
-		assertNull(paymentSuccessObject);
-		
-		assertTrue(paymentServerResponseTimeout);
-		assertNull(paymentServerResponseTimeoutObject);
+		assertEquals(3, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.FORWARD_TO_SERVER, state.event);
+		assertNotNull(state.object);
+		state = states.get(2);
+		assertEquals(PaymentEvent.NO_SERVER_RESPONSE, state.event);
+		assertNull(state.object);
 	}
 	
 }
