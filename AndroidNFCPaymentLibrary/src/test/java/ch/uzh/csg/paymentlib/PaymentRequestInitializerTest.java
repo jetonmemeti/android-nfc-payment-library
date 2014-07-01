@@ -134,13 +134,16 @@ public class PaymentRequestInitializerTest {
 	@Before
 	public void before() {
 		PowerMockito.mockStatic(Log.class);
-		PowerMockito.when(Log.d(Mockito.anyString(), Mockito.anyString())).then(new Answer<Integer>() {
+		Answer<Integer> answer = new Answer<Integer>() {
 			@Override
             public Integer answer(InvocationOnMock invocation) throws Throwable {
 	            System.err.println(Arrays.toString(invocation.getArguments()));
 	            return 0;
             }
-		});
+		};
+		PowerMockito.when(Log.i(Mockito.anyString(), Mockito.anyString())).then(answer);
+		PowerMockito.when(Log.d(Mockito.anyString(), Mockito.anyString())).then(answer);
+		PowerMockito.when(Log.e(Mockito.anyString(), Mockito.anyString())).then(answer);
 	}
 	
 	@Test
@@ -177,24 +180,12 @@ public class PaymentRequestInitializerTest {
 		});
 		stubber.when(transceiver).transceive(any(byte[].class));
 		
-		Stubber stubber2 = doAnswer(new Answer<Integer>() {
-			@Override
-			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				// do nothing
-				return null;
-			}
-			
-		});
-		stubber2.when(transceiver).disable(hostActivity);
-		
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver).transceive(any(byte[].class));
-		//TODO: what about?
-		verify(transceiver).disable(any(Activity.class));
 		
 		assertEquals(2, states.size());
 		State state = states.get(0);
@@ -264,24 +255,12 @@ public class PaymentRequestInitializerTest {
 		});
 		stubber.when(transceiver).transceive(any(byte[].class));
 		
-		Stubber stubber2 = doAnswer(new Answer<Integer>() {
-			@Override
-			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				// do nothing
-				return null;
-			}
-			
-		});
-		stubber2.when(transceiver).disable(hostActivity);
-		
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
-		//TODO: what about?
-		verify(transceiver).disable(any(Activity.class));
 		
 		assertEquals(2, states.size());
 		State state = states.get(0);
@@ -356,24 +335,12 @@ public class PaymentRequestInitializerTest {
 		});
 		stubber.when(transceiver).transceive(any(byte[].class));
 		
-		Stubber stubber2 = doAnswer(new Answer<Integer>() {
-			@Override
-			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				// do nothing
-				return null;
-			}
-			
-		});
-		stubber2.when(transceiver).disable(hostActivity);
-		
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
-		//TODO jeton: needed?
-//		verify(transceiver).disable(any(Activity.class));
 		
 		assertEquals(3, states.size());
 		State state = states.get(0);
@@ -450,24 +417,12 @@ public class PaymentRequestInitializerTest {
 		});
 		stubber.when(transceiver).transceive(any(byte[].class));
 		
-		Stubber stubber2 = doAnswer(new Answer<Integer>() {
-			@Override
-			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				// do nothing
-				return null;
-			}
-			
-		});
-		stubber2.when(transceiver).disable(hostActivity);
-		
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
-		//TODO jeton: needed?
-//		verify(transceiver).disable(any(Activity.class));
 		
 		//assure that the timeout is not thrown
 		Thread.sleep(Config.SERVER_CALL_TIMEOUT+500);
@@ -546,16 +501,6 @@ public class PaymentRequestInitializerTest {
 		});
 		stubber.when(transceiver).transceive(any(byte[].class));
 		
-		Stubber stubber2 = doAnswer(new Answer<Integer>() {
-			@Override
-			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				// do nothing
-				return null;
-			}
-			
-		});
-		stubber2.when(transceiver).disable(hostActivity);
-		
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
@@ -564,8 +509,6 @@ public class PaymentRequestInitializerTest {
 		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
-		//TODO: what about?	
-		verify(transceiver).disable(any(Activity.class));
 		
 		assertEquals(3, states.size());
 		State state = states.get(0);
@@ -641,24 +584,12 @@ public class PaymentRequestInitializerTest {
 		});
 		stubber.when(transceiver).transceive(any(byte[].class));
 		
-		Stubber stubber2 = doAnswer(new Answer<Integer>() {
-			@Override
-			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				// do nothing
-				return null;
-			}
-			
-		});
-		stubber2.when(transceiver).disable(hostActivity);
-		
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
-		//TODO jeton: needed?
-//		verify(transceiver).disable(any(Activity.class));
 		
 		assertEquals(3, states.size());
 		State state = states.get(0);
@@ -734,24 +665,12 @@ public class PaymentRequestInitializerTest {
 		});
 		stubber.when(transceiver).transceive(any(byte[].class));
 		
-		Stubber stubber2 = doAnswer(new Answer<Integer>() {
-			@Override
-			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				// do nothing
-				return null;
-			}
-			
-		});
-		stubber2.when(transceiver).disable(hostActivity);
-		
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
 		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
-		//TODO jeton: needed?
-//		verify(transceiver).disable(any(Activity.class));
 		
 		//assure that the timeout is not thrown
 		Thread.sleep(Config.SERVER_CALL_TIMEOUT+500);
@@ -828,16 +747,6 @@ public class PaymentRequestInitializerTest {
 		});
 		stubber.when(transceiver).transceive(any(byte[].class));
 		
-		Stubber stubber2 = doAnswer(new Answer<Integer>() {
-			@Override
-			public Integer answer(InvocationOnMock invocation) throws Throwable {
-				// do nothing
-				return null;
-			}
-			
-		});
-		stubber2.when(transceiver).disable(hostActivity);
-		
 		//start test case manually, since this would be started on an nfc contact!
 		pri.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
 		
@@ -846,8 +755,6 @@ public class PaymentRequestInitializerTest {
 		assertEquals(1, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
-		//TODO: what about?	
-		verify(transceiver).disable(any(Activity.class));
 		
 		assertEquals(3, states.size());
 		State state = states.get(0);

@@ -2,6 +2,10 @@ package ch.uzh.csg.paymentlib;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import android.app.Activity;
 import android.util.Log;
@@ -42,10 +46,6 @@ import ch.uzh.csg.paymentlib.util.Config;
  */
 public class PaymentRequestInitializer implements IServerResponseListener {
 	
-	//TODO jeton: offer disable() API to disable a view?
-	
-	//TODO jeton: do never call disable() on my own!
-	
 	public static final String TAG = "##NFC## PaymentRequestInitializer";
 	
 	/**
@@ -76,8 +76,8 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	
 	private PersistedPaymentRequest persistedPaymentRequest;
 	
-	private Thread timeoutThread;
-	private volatile boolean serverResponseArrived = false;
+	private ExecutorService executorService;
+	private ServerTimeoutTask timeoutTask;
 	
 	/**
 	 * Instantiates a new Payment Request Initializer in order to conduct a
@@ -128,6 +128,8 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		this.paymentInfos = paymentInfos;
 		this.persistencyHandler = persistencyHandler;
 		
+		this.executorService = Executors.newSingleThreadExecutor();
+		
 		initPayment(nfcTransceiver);
 	}
 
@@ -171,10 +173,47 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		}
 	}
 	
-	private void sendError(PaymentError err) {
+	/**
+	 * Disables the NFC capability bound to this activity. This has to be called
+	 * once you want to finish using the NFC streaming or the payment process is
+	 * finished and is not meant to restart again.
+	 * 
+	 * If you call this method and stay in the same activity, then the Android
+	 * Beam jumps in (see
+	 * http://developer.android.com/guide/topics/connectivity/nfc/nfc.html#p2p).
+	 */
+	public void disable() {
+		terminateTimeoutTask();
+		
+		if (!disabled) {
+			nfcTransceiver.disable(activity);
+			disabled = true;
+		}
+	}
+	
+	private void reset() {
+		nofMessages = 0;
+		persistedPaymentRequest = null;
+		
+		if (disabled) {
+			nfcTransceiver.enable(activity);
+			disabled = false;
+		}
+	}
+
+	private void terminateTimeoutTask() {
+		if (timeoutTask != null) {
+			timeoutTask.terminate();
+			timeoutTask = null;
+		}
+	}
+	
+	private synchronized void sendError(PaymentError err) {
 		aborted = true;
+		terminateTimeoutTask();
 		nfcTransceiver.transceive(new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes());
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err, null);
+		reset();
 	}
 	
 	/*
@@ -198,26 +237,19 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			} else {
 				Log.d(TAG, "handle payment request init message: "+event.name()+ " / " + object);
 			}
-			if (aborted) {
-				if (!disabled) {
-					nfcTransceiver.disable(activity);
-					disabled = true;
-				}
-				return;
-			}
 			
 			switch (event) {
 			case INIT_FAILED:
 			case FATAL_ERROR:
-				aborted = true;
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null, null);
+				reset();
 				break;
 			case CONNECTION_LOST:
-				// abort timeout thread
-				if (timeoutThread != null && timeoutThread.isAlive())
-					timeoutThread.interrupt();
+				terminateTimeoutTask();
 				break;
 			case INITIALIZED:
+				aborted = false;
+				
 				paymentEventHandler.handleMessage(PaymentEvent.INITIALIZED, null, null);
 				nofMessages = 0;
 				try {
@@ -228,6 +260,10 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				}
 				break;
 			case MESSAGE_RECEIVED:
+				if (aborted) {
+					break;
+				}
+				
 				nofMessages++;
 				if (object == null || !(object instanceof byte[])) {
 					sendError(PaymentError.UNEXPECTED_ERROR);
@@ -245,7 +281,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					}
 					
 					paymentEventHandler.handleMessage(PaymentEvent.ERROR, paymentError, null);
-					nfcTransceiver.disable(activity);
+					reset();
 					break;
 				}
 				
@@ -261,19 +297,15 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 							ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
 							paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
 							
-							if (timeoutThread != null && timeoutThread.isAlive())
-								timeoutThread.interrupt();
-							
-							timeoutThread = new Thread(new ServerTimeoutHandler());
-							timeoutThread.start();
+							timeoutTask = new ServerTimeoutTask();
+							executorService.submit(timeoutTask);
 						}
 					} catch (Exception e) {
 						sendError(PaymentError.UNEXPECTED_ERROR);
 					}
 					break;
 				case 2:
-					if (timeoutThread != null && timeoutThread.isAlive())
-						timeoutThread.interrupt();
+					reset();
 					break;
 				}
 				break;
@@ -281,24 +313,27 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		}
 	};
 	
-	private class ServerTimeoutHandler implements Runnable {
-
+	private class ServerTimeoutTask implements Runnable {
+		private final CountDownLatch latch = new CountDownLatch(1);
+		private final long startTime = System.currentTimeMillis();
+		
+		public void terminate() {
+			latch.countDown();
+		}
+		
 		public void run() {
-			long startTime = System.currentTimeMillis();
-			
-			while (!serverResponseArrived) {
-				long now = System.currentTimeMillis();
-				if (now - startTime > Config.SERVER_CALL_TIMEOUT) {
-					aborted = true;
-					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.NO_SERVER_RESPONSE, null);
-					PaymentMessage pm = new PaymentMessage().error().payload(new byte[] { PaymentError.NO_SERVER_RESPONSE.getCode() });
-					nfcTransceiver.transceive(pm.bytes());
-					break;
+			try {
+				if (latch.await(Config.SERVER_CALL_TIMEOUT, TimeUnit.MILLISECONDS)) {
+					//countdown reached 0, we wanted to terminate this thread
+				} else {
+					//waiting time elapsed
+					sendError(PaymentError.NO_SERVER_RESPONSE);
 				}
-				try {
-					Thread.sleep(50);
-				} catch (InterruptedException e) {
-					break;
+			} catch (InterruptedException e) {
+				//the current thread has been interrupted
+				long now = System.currentTimeMillis();
+				if (now - startTime >= Config.SERVER_CALL_TIMEOUT) {
+					sendError(PaymentError.NO_SERVER_RESPONSE);
 				}
 			}
 		}
@@ -307,7 +342,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	
 	@Override
 	public void onServerResponse(ServerPaymentResponse serverPaymentResponse) {
-		serverResponseArrived = true;
+		terminateTimeoutTask();
 		
 		try {
 			PaymentResponse toProcess = null;
@@ -383,26 +418,19 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			} else {
 				Log.d(TAG, "handle payment request init message: "+event.name()+ " / " + object);
 			}
-			if (aborted) {
-				if (!disabled) {
-					nfcTransceiver.disable(activity);
-					disabled = true;
-				}
-				return;
-			}
 			
 			switch (event) {
 			case INIT_FAILED:
 			case FATAL_ERROR:
-				aborted = true;
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null, null);
+				reset();
 				break;
 			case CONNECTION_LOST:
-				// abort timeout thread
-				if (timeoutThread != null && timeoutThread.isAlive())
-					timeoutThread.interrupt();
+				terminateTimeoutTask();
 				break;
 			case INITIALIZED:
+				aborted = false;
+				
 				paymentEventHandler.handleMessage(PaymentEvent.INITIALIZED, null, null);
 				nofMessages = 0;
 				try {
@@ -413,6 +441,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				}
 				break;
 			case MESSAGE_RECEIVED:
+				if (aborted)
+					break;
+				
 				nofMessages++;
 				if (object == null || !(object instanceof byte[])) {
 					sendError(PaymentError.UNEXPECTED_ERROR);
@@ -430,7 +461,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					}
 					
 					paymentEventHandler.handleMessage(PaymentEvent.ERROR, paymentError, null);
-					//nfcTransceiver.disable(activity);
+					reset();
 					break;
 				}
 				
@@ -470,18 +501,14 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 						ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer);
 						paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
 						
-						if (timeoutThread != null && timeoutThread.isAlive())
-							timeoutThread.interrupt();
-						
-						timeoutThread = new Thread(new ServerTimeoutHandler());
-						timeoutThread.start();
+						timeoutTask = new ServerTimeoutTask();
+						executorService.submit(timeoutTask);
 					} catch (Exception e) {
 						sendError(PaymentError.UNEXPECTED_ERROR);
 					}
 					break;
 				case 2:
-					if (timeoutThread != null && timeoutThread.isAlive())
-						timeoutThread.interrupt();
+					reset();
 					break;
 				}
 				break;

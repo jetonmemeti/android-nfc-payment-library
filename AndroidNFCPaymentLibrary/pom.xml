@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ch.uzh.csg</groupId>
 	<artifactId>nfcpaymentlib</artifactId>
-	<version>0.0.4</version>
+	<version>0.1.0</version>
 	<packaging>jar</packaging>
 	<name>AndroidNFCPaymentLibrary</name>
 
