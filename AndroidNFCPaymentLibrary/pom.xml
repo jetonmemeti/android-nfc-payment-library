@@ -43,7 +43,7 @@
 	    <dependency>
 			<groupId>ch.uzh.csg</groupId>
 			<artifactId>custom-serialization</artifactId>
-			<version>0.1.3</version>
+			<version>0.1.5</version>
 	    </dependency>
 	    
 	    <dependency>
