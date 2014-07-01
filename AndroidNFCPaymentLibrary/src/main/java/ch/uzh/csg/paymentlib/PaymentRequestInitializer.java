@@ -218,6 +218,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					timeoutThread.interrupt();
 				break;
 			case INITIALIZED:
+				paymentEventHandler.handleMessage(PaymentEvent.INITIALIZED, null, null);
 				nofMessages = 0;
 				try {
 					InitMessagePayee initMessage = new InitMessagePayee(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -402,6 +403,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					timeoutThread.interrupt();
 				break;
 			case INITIALIZED:
+				paymentEventHandler.handleMessage(PaymentEvent.INITIALIZED, null, null);
 				nofMessages = 0;
 				try {
 					//send empty message, we just need the payee's username

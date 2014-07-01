@@ -130,11 +130,10 @@ public class PaymentRequestHandler {
 					timeoutThread.interrupt();
 				break;
 			case INITIALIZED: //do nothing
+				paymentEventHandler.handleMessage(PaymentEvent.INITIALIZED, null, null);
 				nofMessages = 0;
 				break;
 			case MESSAGE_RECEIVED: //do nothing, handle in IMessageHandler
-				break;
-			default:
 				break;
 			}
 		}

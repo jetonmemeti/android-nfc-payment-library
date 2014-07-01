@@ -20,5 +20,10 @@ public enum PaymentEvent {
 	/*
 	 * when no server response received (neither ok nor nok) --> show on gui
 	 */
-	NO_SERVER_RESPONSE;
+	NO_SERVER_RESPONSE,
+	/*
+	 * This event is propagated whenever a payment is initialized. It is meant
+	 * to be used on the UI to show for example a progress dialog.
+	 */
+	INITIALIZED;
 }
