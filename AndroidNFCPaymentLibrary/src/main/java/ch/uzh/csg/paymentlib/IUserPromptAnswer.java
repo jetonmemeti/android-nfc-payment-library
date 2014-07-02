@@ -17,12 +17,12 @@ public interface IUserPromptAnswer {
 	 * When this method is called, the payer has accepted the payment request.
 	 * The implementation needs to decide what needs to be done next.
 	 */
-	public abstract void acceptPayment();
+	public void acceptPayment();
 	
 	/**
 	 * When this method is called, the payer has rejected the payment request.
 	 * The implementation needs to decide what needs to be done next.
 	 */
-	public abstract void rejectPayment();
+	public void rejectPayment();
 	
 }
