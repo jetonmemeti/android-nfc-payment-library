@@ -2,6 +2,10 @@ package ch.uzh.csg.paymentlib;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import android.app.Activity;
 import android.util.Log;
@@ -55,8 +59,12 @@ public class PaymentRequestHandler {
 	private MessageHandler messageHandler;
 	
 	private int nofMessages = 0;
+	private boolean aborted = false;
 	
-	private Thread timeoutThread = null;
+	private ExecutorService executorService;
+	private ServerTimeoutTask timeoutTask;
+	
+	private PersistedPaymentRequest persistedPaymentRequest;
 	
 	/**
 	 * Instantiates a new payment request handler, which handles incoming
@@ -89,6 +97,8 @@ public class PaymentRequestHandler {
 		this.userPrompt = userPrompt;
 		this.persistencyHandler = persistencyHandler;
 		this.messageHandler = new MessageHandler();
+		
+		this.executorService = Executors.newSingleThreadExecutor();
 		
 		NfcResponder c = new NfcResponder(nfcEventHandler, messageHandler);
 		HostApduServiceNfcLib.init(c);
@@ -123,13 +133,15 @@ public class PaymentRequestHandler {
 			case INIT_FAILED:
 			case FATAL_ERROR:
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null, null);
+				terminateTimeoutTask();
+				reset();
 				break;
 			case CONNECTION_LOST:
-				// abort timeout thread
-				if (timeoutThread != null && timeoutThread.isAlive())
-					timeoutThread.interrupt();
+				terminateTimeoutTask();
 				break;
 			case INITIALIZED: //do nothing
+				aborted = false;
+				
 				paymentEventHandler.handleMessage(PaymentEvent.INITIALIZED, null, null);
 				nofMessages = 0;
 				break;
@@ -140,8 +152,23 @@ public class PaymentRequestHandler {
 		
 	};
 	
+	public void reset() {
+		nofMessages = 0;
+		persistedPaymentRequest = null;
+	}
+	
+	private void terminateTimeoutTask() {
+		if (timeoutTask != null) {
+			timeoutTask.terminate();
+			timeoutTask = null;
+		}
+	}
+	
 	private byte[] getError(PaymentError err) {
-		messageHandler.resetState();
+		terminateTimeoutTask();
+		aborted = true;
+		reset();
+		
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err, null);
 		return new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes();
 	}
@@ -150,7 +177,7 @@ public class PaymentRequestHandler {
 	 * only for test purposes
 	 */
 	protected MessageHandler getMessageHandler() {
-		return new MessageHandler();
+		return messageHandler;
 	}
 	
 	/*
@@ -161,17 +188,12 @@ public class PaymentRequestHandler {
 	}
 	
 	protected class MessageHandler implements ITransceiveHandler {
-		
-		private PersistedPaymentRequest persistedPaymentRequest = null;
-		private volatile boolean serverResponseArrived = false;
-		
-		public void resetState() {
-			serverResponseArrived = false;
-			persistedPaymentRequest = null;
-		}
 
 		public byte[] handleMessage(byte[] message, final ISendLater sendLater) {
 			Log.d(TAG, "got payment message: "+Arrays.toString(message));
+			
+			if (aborted)
+				return getError(PaymentError.UNEXPECTED_ERROR);
 			
 			nofMessages++;
 			PaymentMessage pm = new PaymentMessage().bytes(message);
@@ -190,15 +212,12 @@ public class PaymentRequestHandler {
 				case 1:
 					byte[] bytes = userInfos.getUsername().getBytes(Charset.forName("UTF-8"));
 					
-					if (timeoutThread != null && timeoutThread.isAlive())
-						timeoutThread.interrupt();
-					
-					timeoutThread = new Thread(new TimeoutHandler());
-					timeoutThread.start();
+					timeoutTask = new ServerTimeoutTask();
+					executorService.submit(timeoutTask);
 					
 					return new PaymentMessage().payee().payload(bytes).bytes();
 				case 2:
-					serverResponseArrived = true;
+					terminateTimeoutTask();
 					
 					try {
 						Log.d(TAG, "DBG1: "+Arrays.toString(pm.payload()));
@@ -209,7 +228,7 @@ public class PaymentRequestHandler {
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
 							persistencyHandler.delete(persistedPaymentRequest);
-							resetState();
+							reset();
 							
 							switch (paymentResponse.getStatus()) {
 							case FAILURE:
@@ -256,11 +275,8 @@ public class PaymentRequestHandler {
 								
 								persistencyHandler.add(persistedPaymentRequest);
 								
-								if (timeoutThread != null && timeoutThread.isAlive())
-									timeoutThread.interrupt();
-								
-								timeoutThread = new Thread(new TimeoutHandler());
-								timeoutThread.start();
+								timeoutTask = new ServerTimeoutTask();
+								executorService.submit(timeoutTask);
 								
 								sendLater.sendLater(new PaymentMessage().payload(encoded).bytes());
 							} else {
@@ -285,11 +301,8 @@ public class PaymentRequestHandler {
 									pr.sign(userInfos.getPrivateKey());
 									byte[] encoded = pr.encode();
 									
-									if (timeoutThread != null && timeoutThread.isAlive())
-										timeoutThread.interrupt();
-									
-									timeoutThread = new Thread(new TimeoutHandler());
-									timeoutThread.start();
+									timeoutTask = new ServerTimeoutTask();
+									executorService.submit(timeoutTask);
 									
 									persistencyHandler.add(persistedPaymentRequest);
 									sendLater.sendLater(new PaymentMessage().payload(encoded).bytes());
@@ -312,7 +325,7 @@ public class PaymentRequestHandler {
 						return getError(PaymentError.UNEXPECTED_ERROR);
 					}
 				case 2:
-					serverResponseArrived = true;
+					terminateTimeoutTask();
 					
 					try {
 						Log.d(TAG, "DBG1: "+Arrays.toString(pm.payload()));
@@ -323,7 +336,7 @@ public class PaymentRequestHandler {
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
 							persistencyHandler.delete(persistedPaymentRequest);
-							resetState();
+							reset();
 							switch (paymentResponse.getStatus()) {
 							case FAILURE:
 								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
@@ -347,23 +360,29 @@ public class PaymentRequestHandler {
 			Log.d(TAG, "exception generic");
 			return getError(PaymentError.UNEXPECTED_ERROR);
 		}
+	}
+	
+	private class ServerTimeoutTask implements Runnable {
+		private final CountDownLatch latch = new CountDownLatch(1);
+		private final long startTime = System.currentTimeMillis();
 		
-		private class TimeoutHandler implements Runnable {
-			
-			public void run() {
-				long startTime = System.currentTimeMillis();
-				
-				while (!serverResponseArrived) {
-					long now = System.currentTimeMillis();
-					if (now - startTime > Config.SERVER_RESPONSE_TIMEOUT) {
-						paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.NO_SERVER_RESPONSE, null);
-						break;
-					}
-					try {
-						Thread.sleep(50);
-					} catch (InterruptedException e) {
-						break;
-					}
+		public void terminate() {
+			latch.countDown();
+		}
+		
+		public void run() {
+			try {
+				if (latch.await(Config.SERVER_RESPONSE_TIMEOUT, TimeUnit.MILLISECONDS)) {
+					//countdown reached 0, we wanted to terminate this thread
+				} else {
+					//waiting time elapsed
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.NO_SERVER_RESPONSE, null);
+				}
+			} catch (InterruptedException e1) {
+				//the current thread has been interrupted
+				long now = System.currentTimeMillis();
+				if (now - startTime >= Config.SERVER_RESPONSE_TIMEOUT) {
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.NO_SERVER_RESPONSE, null);
 				}
 			}
 		}

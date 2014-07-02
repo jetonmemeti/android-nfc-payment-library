@@ -75,13 +75,16 @@ public class PaymentRequestHandlerTest {
 	@Before
 	public void before() {
 		PowerMockito.mockStatic(Log.class);
-		PowerMockito.when(Log.d(Mockito.anyString(), Mockito.anyString())).then(new Answer<Integer>() {
+		Answer<Integer> answer = new Answer<Integer>() {
 			@Override
             public Integer answer(InvocationOnMock invocation) throws Throwable {
 	            System.err.println(Arrays.toString(invocation.getArguments()));
 	            return 0;
             }
-		});
+		};
+		PowerMockito.when(Log.i(Mockito.anyString(), Mockito.anyString())).then(answer);
+		PowerMockito.when(Log.d(Mockito.anyString(), Mockito.anyString())).then(answer);
+		PowerMockito.when(Log.e(Mockito.anyString(), Mockito.anyString())).then(answer);
 	}
 	
 	private IPaymentEventHandler paymentEventHandler = new IPaymentEventHandler() {

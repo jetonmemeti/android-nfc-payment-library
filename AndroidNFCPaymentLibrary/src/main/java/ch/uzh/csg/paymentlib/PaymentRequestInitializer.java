@@ -71,7 +71,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	
 	private volatile NfcInitiator nfcTransceiver;
 	private int nofMessages = 0;
-	private volatile boolean aborted = false;
+	private boolean aborted = false;
 	private boolean disabled = false;
 	
 	private PersistedPaymentRequest persistedPaymentRequest;
@@ -209,8 +209,8 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	}
 	
 	private synchronized void sendError(PaymentError err) {
-		aborted = true;
 		terminateTimeoutTask();
+		aborted = true;
 		nfcTransceiver.transceive(new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes());
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err, null);
 		reset();
@@ -242,6 +242,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case INIT_FAILED:
 			case FATAL_ERROR:
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, null, null);
+				terminateTimeoutTask();
 				reset();
 				break;
 			case CONNECTION_LOST:
@@ -313,102 +314,6 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		}
 	};
 	
-	private class ServerTimeoutTask implements Runnable {
-		private final CountDownLatch latch = new CountDownLatch(1);
-		private final long startTime = System.currentTimeMillis();
-		
-		public void terminate() {
-			latch.countDown();
-		}
-		
-		public void run() {
-			try {
-				if (latch.await(Config.SERVER_CALL_TIMEOUT, TimeUnit.MILLISECONDS)) {
-					//countdown reached 0, we wanted to terminate this thread
-				} else {
-					//waiting time elapsed
-					sendError(PaymentError.NO_SERVER_RESPONSE);
-				}
-			} catch (InterruptedException e) {
-				//the current thread has been interrupted
-				long now = System.currentTimeMillis();
-				if (now - startTime >= Config.SERVER_CALL_TIMEOUT) {
-					sendError(PaymentError.NO_SERVER_RESPONSE);
-				}
-			}
-		}
-		
-	}
-	
-	@Override
-	public void onServerResponse(ServerPaymentResponse serverPaymentResponse) {
-		terminateTimeoutTask();
-		
-		try {
-			PaymentResponse toProcess = null;
-			PaymentResponse toForward = null;
-			
-			switch (paymentType) {
-			case REQUEST_PAYMENT:
-				if (serverPaymentResponse.getPaymentResponsePayee() != null) {
-					toProcess = serverPaymentResponse.getPaymentResponsePayee();
-					toForward = serverPaymentResponse.getPaymentResponsePayer();
-				} else {
-					toProcess = serverPaymentResponse.getPaymentResponsePayer();
-					toForward = toProcess;
-				}
-				break;
-			case SEND_PAYMENT:
-				toProcess = serverPaymentResponse.getPaymentResponsePayer();
-				if (serverPaymentResponse.getPaymentResponsePayee() != null) {
-					toForward = serverPaymentResponse.getPaymentResponsePayee();
-				} else {
-					toForward = toProcess;
-				}
-				break;
-			}
-			
-			boolean signatureValid = toProcess.verify(serverInfos.getPublicKey());
-			if (!signatureValid) {
-				Log.d(TAG, "signature not valid");
-				sendError(PaymentError.UNEXPECTED_ERROR);
-			} else {
-				if (persistedPaymentRequest != null)
-					persistencyHandler.delete(persistedPaymentRequest);
-				
-				switch (toProcess.getStatus()) {
-				case FAILURE:
-					Log.d(TAG, "payment failure");
-					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
-					break;
-				case SUCCESS:
-					Log.d(TAG, "payment success");
-					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, toProcess, null);
-					break;
-				case DUPLICATE_REQUEST:
-					Log.d(TAG, "payment duplicate");
-					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST, null);
-					break;
-				}
-				
-				byte[] encode = toForward.encode();
-				Log.d(TAG, "DBG2: "+Arrays.toString(encode));
-				
-				switch (paymentType) {
-				case REQUEST_PAYMENT:
-					nfcTransceiver.transceive(new PaymentMessage().payee().payload(encode).bytes());
-					break;
-				case SEND_PAYMENT:
-					nfcTransceiver.transceive(new PaymentMessage().payer().payload(encode).bytes());
-					break;
-				}
-			}
-		} catch (Exception e) {
-			Log.e(TAG, "exception", e);
-			sendError(PaymentError.UNEXPECTED_ERROR);
-		}
-	}
-
 	private NfcEvent nfcEventHandlerSend = new NfcEvent() {
 		
 		@Override
@@ -515,5 +420,100 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			}
 		}
 	};
+	
+	@Override
+	public void onServerResponse(ServerPaymentResponse serverPaymentResponse) {
+		terminateTimeoutTask();
+		
+		try {
+			PaymentResponse toProcess = null;
+			PaymentResponse toForward = null;
+			
+			switch (paymentType) {
+			case REQUEST_PAYMENT:
+				if (serverPaymentResponse.getPaymentResponsePayee() != null) {
+					toProcess = serverPaymentResponse.getPaymentResponsePayee();
+					toForward = serverPaymentResponse.getPaymentResponsePayer();
+				} else {
+					toProcess = serverPaymentResponse.getPaymentResponsePayer();
+					toForward = toProcess;
+				}
+				break;
+			case SEND_PAYMENT:
+				toProcess = serverPaymentResponse.getPaymentResponsePayer();
+				if (serverPaymentResponse.getPaymentResponsePayee() != null) {
+					toForward = serverPaymentResponse.getPaymentResponsePayee();
+				} else {
+					toForward = toProcess;
+				}
+				break;
+			}
+			
+			boolean signatureValid = toProcess.verify(serverInfos.getPublicKey());
+			if (!signatureValid) {
+				Log.d(TAG, "signature not valid");
+				sendError(PaymentError.UNEXPECTED_ERROR);
+			} else {
+				if (persistedPaymentRequest != null)
+					persistencyHandler.delete(persistedPaymentRequest);
+				
+				switch (toProcess.getStatus()) {
+				case FAILURE:
+					Log.d(TAG, "payment failure");
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
+					break;
+				case SUCCESS:
+					Log.d(TAG, "payment success");
+					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, toProcess, null);
+					break;
+				case DUPLICATE_REQUEST:
+					Log.d(TAG, "payment duplicate");
+					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST, null);
+					break;
+				}
+				
+				byte[] encode = toForward.encode();
+				Log.d(TAG, "DBG2: "+Arrays.toString(encode));
+				
+				switch (paymentType) {
+				case REQUEST_PAYMENT:
+					nfcTransceiver.transceive(new PaymentMessage().payee().payload(encode).bytes());
+					break;
+				case SEND_PAYMENT:
+					nfcTransceiver.transceive(new PaymentMessage().payer().payload(encode).bytes());
+					break;
+				}
+			}
+		} catch (Exception e) {
+			Log.e(TAG, "exception", e);
+			sendError(PaymentError.UNEXPECTED_ERROR);
+		}
+	}
+	
+	private class ServerTimeoutTask implements Runnable {
+		private final CountDownLatch latch = new CountDownLatch(1);
+		private final long startTime = System.currentTimeMillis();
+		
+		public void terminate() {
+			latch.countDown();
+		}
+		
+		public void run() {
+			try {
+				if (latch.await(Config.SERVER_CALL_TIMEOUT, TimeUnit.MILLISECONDS)) {
+					//countdown reached 0, we wanted to terminate this thread
+				} else {
+					//waiting time elapsed
+					sendError(PaymentError.NO_SERVER_RESPONSE);
+				}
+			} catch (InterruptedException e) {
+				//the current thread has been interrupted
+				long now = System.currentTimeMillis();
+				if (now - startTime >= Config.SERVER_CALL_TIMEOUT) {
+					sendError(PaymentError.NO_SERVER_RESPONSE);
+				}
+			}
+		}
+	}
 
 }
