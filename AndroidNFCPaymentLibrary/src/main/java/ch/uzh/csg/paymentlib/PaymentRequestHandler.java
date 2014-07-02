@@ -15,9 +15,10 @@ import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.nfclib.HostApduServiceNfcLib;
 import ch.uzh.csg.nfclib.ISendLater;
+import ch.uzh.csg.nfclib.ITransceiveHandler;
 import ch.uzh.csg.nfclib.NfcEvent;
 import ch.uzh.csg.nfclib.NfcResponder;
-import ch.uzh.csg.nfclib.ITransceiveHandler;
+import ch.uzh.csg.paymentlib.PaymentRequestInitializer.PaymentType;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
 import ch.uzh.csg.paymentlib.exceptions.IllegalArgumentException;
@@ -44,7 +45,7 @@ import ch.uzh.csg.paymentlib.util.Config;
  */
 public class PaymentRequestHandler {
 	
-	public static final String TAG = "##NFC## PaymentRequestHandler";
+	public static final String TAG = "PaymentRequestHandler";
 	
 	/**
 	 * The ack message to be returned if the payment finished successfully.
@@ -128,6 +129,8 @@ public class PaymentRequestHandler {
 		
 		@Override
 		public void handleMessage(Type event, Object object) {
+			if (Config.DEBUG)
+				Log.d(TAG, "Received NfcEvent: "+event);
 		
 			switch (event) {
 			case INIT_FAILED:
@@ -152,19 +155,28 @@ public class PaymentRequestHandler {
 		
 	};
 	
-	public void reset() {
+	public synchronized void reset() {
+		if (Config.DEBUG)
+			Log.d(TAG, "Resetting states");
+		
 		nofMessages = 0;
 		persistedPaymentRequest = null;
 	}
 	
 	private void terminateTimeoutTask() {
 		if (timeoutTask != null) {
+			if (Config.DEBUG)
+				Log.d(TAG, "Terminating timeout task");
+			
 			timeoutTask.terminate();
 			timeoutTask = null;
 		}
 	}
 	
 	private byte[] getError(PaymentError err) {
+		if (Config.DEBUG)
+			Log.d(TAG, "Returning error: "+err);
+		
 		terminateTimeoutTask();
 		aborted = true;
 		reset();
@@ -190,7 +202,8 @@ public class PaymentRequestHandler {
 	protected class MessageHandler implements ITransceiveHandler {
 
 		public byte[] handleMessage(byte[] message, final ISendLater sendLater) {
-			Log.d(TAG, "got payment message: "+Arrays.toString(message));
+			if (Config.DEBUG)
+				Log.d(TAG, "Received PaymentMessage: "+Arrays.toString(message));
 			
 			if (aborted)
 				return getError(PaymentError.UNEXPECTED_ERROR);
@@ -199,10 +212,13 @@ public class PaymentRequestHandler {
 			PaymentMessage pm = new PaymentMessage().bytes(message);
 			if (pm.isError()) {
 				try {
+					if (Config.DEBUG)
+						Log.d(TAG, "Received PaymentMessage ERROR");
+					
 					PaymentError paymentError = PaymentError.getPaymentError(pm.payload()[0]);
 					return getError(paymentError);
 				} catch (Exception e) {
-					Log.d(TAG, "exception", e);
+					Log.wtf(TAG, e);
 					return getError(PaymentError.UNEXPECTED_ERROR);
 				}
 			}
@@ -210,6 +226,9 @@ public class PaymentRequestHandler {
 			if (pm.isPayer()) {
 				switch (nofMessages) {
 				case 1:
+					if (Config.DEBUG)
+						Log.d(TAG, "Returning username (payee)");
+					
 					byte[] bytes = userInfos.getUsername().getBytes(Charset.forName("UTF-8"));
 					
 					timeoutTask = new ServerTimeoutTask();
@@ -220,11 +239,10 @@ public class PaymentRequestHandler {
 					terminateTimeoutTask();
 					
 					try {
-						Log.d(TAG, "DBG1: "+Arrays.toString(pm.payload()));
 						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 						boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
 						if (!signatureValid) {
-							Log.d(TAG, "exception sig not valid " + serverInfos.getPublicKey());
+							Log.e(TAG, "The signature of the server response is not valid! This might be a Man-In-The-Middle attack, where someone manipulated the server response.");
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
 							persistencyHandler.delete(persistedPaymentRequest);
@@ -232,20 +250,32 @@ public class PaymentRequestHandler {
 							
 							switch (paymentResponse.getStatus()) {
 							case FAILURE:
+								if (Config.DEBUG)
+									Log.d(TAG, "The server refused the payment");
+								
 								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
 								break;
 							case SUCCESS:
+								if (Config.DEBUG)
+									Log.d(TAG, "The payment request was successful");
+								
 								paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse, null);
 								break;
 							case DUPLICATE_REQUEST:
+								if (Config.DEBUG)
+									Log.d(TAG, "This payment request has already been accepted by the server before");
+								
 								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST, null);
 								break;
 							}
 							
+							if (Config.DEBUG)
+								Log.d(TAG, "Returning ACK");
+							
 							return new PaymentMessage().payload(ACK).bytes();
 						}
 					} catch (Exception e) {
-						Log.d(TAG, "exception", e);
+						Log.wtf(TAG, e);
 						return getError(PaymentError.UNEXPECTED_ERROR);
 					}
 				}
@@ -253,6 +283,9 @@ public class PaymentRequestHandler {
 				switch (nofMessages) {
 				case 1:
 					try {
+						if (Config.DEBUG)
+							Log.d(TAG, "About to return signed payment request (payer)");
+						
 						final InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
 						
 						boolean paymentAccepted;
@@ -262,13 +295,17 @@ public class PaymentRequestHandler {
 								&& persistedPaymentRequest.getCurrency().getCode() == initMessage.getCurrency().getCode()
 								&& persistedPaymentRequest.getAmount() == initMessage.getAmount()) {
 							/*
-							 * this is a retry because the last try was not
-							 * successful (= no server response) or a payment
-							 * resume (the user took his device away to
-							 * accept/reject the payment)
+							 * this is a payment resume (the user took his
+							 * device away to accept/reject the payment)
 							 */
+							if (Config.DEBUG)
+								Log.d(TAG, "Payment resume after reconnection");
+							
 							paymentAccepted = userPrompt.isPaymentAccepted();
 							if(paymentAccepted) {
+								if (Config.DEBUG)
+									Log.d(TAG, "Payment request has been accepted");
+								
 								PaymentRequest pr = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
 								pr.sign(userInfos.getPrivateKey());
 								byte[] encoded = pr.encode();
@@ -278,17 +315,29 @@ public class PaymentRequestHandler {
 								timeoutTask = new ServerTimeoutTask();
 								executorService.submit(timeoutTask);
 								
+								if (Config.DEBUG)
+									Log.d(TAG, "Returning signed payment request (payer)");
+								
 								sendLater.sendLater(new PaymentMessage().payload(encoded).bytes());
 							} else {
+								if (Config.DEBUG)
+									Log.d(TAG, "Payment request has been rejected by the payer");
+								
 								sendLater.sendLater(getError(PaymentError.PAYER_REFUSED));
 							}
 						} else {
-							// this is a new session
-							Log.d(TAG, "wait for user answer");
+							if (Config.DEBUG)
+								Log.d(TAG, "Handle new payment request (wait for user answer)");
+							
 							persistedPaymentRequest = persistencyHandler.getPersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount());
 							if (persistedPaymentRequest == null) {
-								// this is a new payment request (not a payment request with a lost server response)
+								if (Config.DEBUG)
+									Log.d(TAG, "Creating new payment request");
+								
 								persistedPaymentRequest = new PersistedPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), System.currentTimeMillis());
+							} else {
+								if (Config.DEBUG)
+									Log.d(TAG, "Loaded payment request from internal storage (previous payment request did not receive any server response)");
 							}
 							
 							userPrompt.promptUserPaymentRequest(initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), new IUserPromptAnswer() {
@@ -296,68 +345,99 @@ public class PaymentRequestHandler {
 								@Override
 								public void acceptPayment() {
 									try {
-									//response 1st message
-									PaymentRequest pr = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
-									pr.sign(userInfos.getPrivateKey());
-									byte[] encoded = pr.encode();
-									
-									timeoutTask = new ServerTimeoutTask();
-									executorService.submit(timeoutTask);
-									
-									persistencyHandler.add(persistedPaymentRequest);
-									sendLater.sendLater(new PaymentMessage().payload(encoded).bytes());
+										if (Config.DEBUG)
+											Log.d(TAG, "Payer accepted payment request");
+										
+										//response 1st message
+										PaymentRequest pr = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), initMessage.getUsername(), initMessage.getCurrency(), initMessage.getAmount(), persistedPaymentRequest.getTimestamp());
+										pr.sign(userInfos.getPrivateKey());
+										byte[] encoded = pr.encode();
+										
+										timeoutTask = new ServerTimeoutTask();
+										executorService.submit(timeoutTask);
+										
+										persistencyHandler.add(persistedPaymentRequest);
+										
+										if (Config.DEBUG)
+											Log.d(TAG, "Returning signed payment request");
+										
+										sendLater.sendLater(new PaymentMessage().payload(encoded).bytes());
 									} catch (Exception e) {
+										Log.wtf(TAG, e);
 										sendLater.sendLater(getError(PaymentError.UNEXPECTED_ERROR));
 									}
 								}
 								
 								@Override
 								public void rejectPayment() {
+									if (Config.DEBUG)
+										Log.d(TAG, "Payer rejected payment request");
+									
 									sendLater.sendLater(getError(PaymentError.PAYER_REFUSED));
 								}
 								
 							});
 						}
 						
+						if (Config.DEBUG)
+							Log.d(TAG, "Returning null / start polling");
+						
 						return null;
 					} catch (Exception e) {
-						Log.d(TAG, "exception", e);
+						Log.wtf(TAG, e);
 						return getError(PaymentError.UNEXPECTED_ERROR);
 					}
 				case 2:
+					if (Config.DEBUG)
+						Log.d(TAG, "Received server response");
+					
 					terminateTimeoutTask();
 					
 					try {
-						Log.d(TAG, "DBG1: "+Arrays.toString(pm.payload()));
 						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 						boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
 						if (!signatureValid) {
-							Log.d(TAG, "exception sig not valid " + serverInfos.getPublicKey());
+							Log.e(TAG, "The signature of the server response is not valid! This might be a Man-In-The-Middle attack, where someone manipulated the server response.");
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
 							persistencyHandler.delete(persistedPaymentRequest);
 							reset();
 							switch (paymentResponse.getStatus()) {
 							case FAILURE:
+								if (Config.DEBUG)
+									Log.d(TAG, "The server refused the payment");
+								
 								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
 								break;
 							case SUCCESS:
+								if (Config.DEBUG)
+									Log.d(TAG, "The payment request was successful");
+								
 								paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, paymentResponse, null);
 								break;
 							case DUPLICATE_REQUEST:
+								if (Config.DEBUG)
+									Log.d(TAG, "This payment request has already been accepted by the server before.");
+								
 								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST, null);
 								break;
 							}
 							
+							if (Config.DEBUG)
+								Log.d(TAG, "Returning ACK");
+							
 							return new PaymentMessage().payload(ACK).bytes();
 						}
 					} catch (Exception e) {
-						Log.d(TAG, "exception", e);
+						Log.wtf(TAG, e);
 						return getError(PaymentError.UNEXPECTED_ERROR);
 					}
 				}
 			}
-			Log.d(TAG, "exception generic");
+			
+			if (Config.DEBUG)
+				Log.d(TAG, "Generic return block - this should never happen");
+			
 			return getError(PaymentError.UNEXPECTED_ERROR);
 		}
 	}
@@ -376,12 +456,20 @@ public class PaymentRequestHandler {
 					//countdown reached 0, we wanted to terminate this thread
 				} else {
 					//waiting time elapsed
+					if (Config.DEBUG)
+						Log.d(TAG, "Server response timeout");
+					
+					reset();
 					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.NO_SERVER_RESPONSE, null);
 				}
 			} catch (InterruptedException e1) {
 				//the current thread has been interrupted
 				long now = System.currentTimeMillis();
 				if (now - startTime >= Config.SERVER_RESPONSE_TIMEOUT) {
+					if (Config.DEBUG)
+						Log.d(TAG, "Server response timeout");
+					
+					reset();
 					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.NO_SERVER_RESPONSE, null);
 				}
 			}

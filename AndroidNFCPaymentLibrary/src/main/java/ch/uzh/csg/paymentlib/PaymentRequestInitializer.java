@@ -1,7 +1,6 @@
 package ch.uzh.csg.paymentlib;
 
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -16,8 +15,8 @@ import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.nfclib.NfcEvent;
-import ch.uzh.csg.nfclib.NfcLibException;
 import ch.uzh.csg.nfclib.NfcInitiator;
+import ch.uzh.csg.nfclib.NfcLibException;
 import ch.uzh.csg.paymentlib.container.PaymentInfos;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
 import ch.uzh.csg.paymentlib.container.UserInfos;
@@ -46,7 +45,7 @@ import ch.uzh.csg.paymentlib.util.Config;
  */
 public class PaymentRequestInitializer implements IServerResponseListener {
 	
-	public static final String TAG = "##NFC## PaymentRequestInitializer";
+	public static final String TAG = "PaymentRequestInitializer";
 	
 	/**
 	 * Defines a Payment type. If the payee (or seller) initiates a payment
@@ -168,7 +167,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		} else {
 			this.nfcTransceiver = new NfcInitiator(nfcEventHandler, activity, userInfos.getUserId());
 			
-			Log.d(TAG, "init and enable transceiver");
+			if (Config.DEBUG)
+				Log.d(TAG, "Init and enable transceiver");
+				
 			this.nfcTransceiver.enable(activity);
 		}
 	}
@@ -183,6 +184,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	 * http://developer.android.com/guide/topics/connectivity/nfc/nfc.html#p2p).
 	 */
 	public void disable() {
+		if (Config.DEBUG)
+			Log.d(TAG, "Disable NFC");
+		
 		terminateTimeoutTask();
 		
 		if (!disabled) {
@@ -192,6 +196,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	}
 	
 	private void reset() {
+		if (Config.DEBUG)
+			Log.d(TAG, "Resetting states");
+		
 		nofMessages = 0;
 		persistedPaymentRequest = null;
 		
@@ -203,6 +210,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 
 	private void terminateTimeoutTask() {
 		if (timeoutTask != null) {
+			if (Config.DEBUG)
+				Log.d(TAG, "Terminating timeout task");
+			
 			timeoutTask.terminate();
 			timeoutTask = null;
 		}
@@ -211,6 +221,10 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	private synchronized void sendError(PaymentError err) {
 		terminateTimeoutTask();
 		aborted = true;
+		
+		if (Config.DEBUG)
+			Log.d(TAG, "Sending error: "+err);
+		
 		nfcTransceiver.transceive(new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes());
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err, null);
 		reset();
@@ -232,11 +246,8 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		
 		@Override
 		public void handleMessage(Type event, Object object) {
-			if(object instanceof byte[]) {
-				Log.d(TAG, "handle payment request init message: "+event.name()+ " / " + Arrays.toString((byte[]) object));
-			} else {
-				Log.d(TAG, "handle payment request init message: "+event.name()+ " / " + object);
-			}
+			if (Config.DEBUG)
+				Log.d(TAG, "Received NfcEvent: "+event);
 			
 			switch (event) {
 			case INIT_FAILED:
@@ -255,6 +266,10 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				nofMessages = 0;
 				try {
 					InitMessagePayee initMessage = new InitMessagePayee(userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
+					
+					if (Config.DEBUG)
+						Log.d(TAG, "Sending init message payment request");
+					
 					nfcTransceiver.transceive(new PaymentMessage().payee().payload(initMessage.encode()).bytes());
 				} catch (Exception e) {
 					sendError(PaymentError.UNEXPECTED_ERROR);
@@ -273,6 +288,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				byte[] tmp = (byte[]) object;
 				PaymentMessage response = new PaymentMessage().bytes(tmp);
 				if (response.isError()) {
+					if (Config.DEBUG)
+						Log.d(TAG, "Received PaymentMessage ERROR");
+					
 					PaymentError paymentError = null;
 					if (response.payload() != null && response.payload().length > 0) {
 						try {
@@ -289,23 +307,35 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				switch (nofMessages) {
 				case 1:
 					try {
+						if (Config.DEBUG)
+							Log.d(TAG, "Received signed payment request from payer");
+						
 						PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, response.payload());
 						PaymentRequest paymentRequestPayee = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), paymentRequestPayer.getUsernamePayer(), userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentRequestPayer.getTimestamp());
 						if (!paymentRequestPayer.requestsIdentic(paymentRequestPayee)) {
+							Log.e(TAG, "The received payment request does not correspond to the payment request sent. Aborted the payment process.");
 							sendError(PaymentError.REQUESTS_NOT_IDENTIC);
 						} else {
 							paymentRequestPayee.sign(userInfos.getPrivateKey());
 							ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
-							paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
+							
+							if (Config.DEBUG)
+								Log.d(TAG, "About to forward the payment request to the server");
 							
 							timeoutTask = new ServerTimeoutTask();
 							executorService.submit(timeoutTask);
+							
+							paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
 						}
 					} catch (Exception e) {
+						Log.wtf(TAG, e);
 						sendError(PaymentError.UNEXPECTED_ERROR);
 					}
 					break;
 				case 2:
+					if (Config.DEBUG)
+						Log.d(TAG, "Received ACK");
+					
 					reset();
 					break;
 				}
@@ -318,11 +348,8 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		
 		@Override
 		public void handleMessage(Type event, Object object) {	
-			if(object instanceof byte[]) {
-				Log.d(TAG, "handle payment request init message: "+event.name()+ " / " + Arrays.toString((byte[]) object));
-			} else {
-				Log.d(TAG, "handle payment request init message: "+event.name()+ " / " + object);
-			}
+			if (Config.DEBUG)
+				Log.d(TAG, "Received NfcEvent: "+event);
 			
 			switch (event) {
 			case INIT_FAILED:
@@ -339,6 +366,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				paymentEventHandler.handleMessage(PaymentEvent.INITIALIZED, null, null);
 				nofMessages = 0;
 				try {
+					if (Config.DEBUG)
+						Log.d(TAG, "Request the payee's username");
+					
 					//send empty message, we just need the payee's username
 					nfcTransceiver.transceive(new PaymentMessage().payer().payload(new byte[] { 0x00 }).bytes());
 				} catch (Exception e) {
@@ -357,6 +387,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				byte[] tmp = (byte[]) object;
 				PaymentMessage response = new PaymentMessage().bytes(tmp);
 				if (response.isError()) {
+					if (Config.DEBUG)
+						Log.d(TAG, "Received PaymentMessage ERROR");
+					
 					PaymentError paymentError = null;
 					if (response.payload() != null && response.payload().length > 0) {
 						try {
@@ -372,6 +405,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				
 				switch (nofMessages) {
 				case 1:
+					if (Config.DEBUG)
+						Log.d(TAG, "Received the payee's username");
+					
 					String usernamePayee = new String(response.payload(), Charset.forName("UTF-8"));
 					
 					try {
@@ -382,20 +418,25 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 								&& persistedPaymentRequest.getCurrency().getCode() == paymentInfos.getCurrency().getCode()
 								&& persistedPaymentRequest.getAmount() == paymentInfos.getAmount()) {
 							/*
-							 * this is a retry because the last try was not
-							 * successful (= no server response) or a payment
-							 * resume (the user took his device away to
-							 * accept/reject the payment)
+							 * this is a payment resume (the user took his
+							 * device away to accept/reject the payment)
 							 */
+							if (Config.DEBUG)
+								Log.d(TAG, "Payment resume after reconnection");
 							
 							paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), persistedPaymentRequest.getUsername(), persistedPaymentRequest.getCurrency(), persistedPaymentRequest.getAmount(), persistedPaymentRequest.getTimestamp());
 						} else {
 							// this is a new session
 							persistedPaymentRequest = persistencyHandler.getPersistedPaymentRequest(usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount());
 							if (persistedPaymentRequest == null) {
-								// this is a new payment request (not a payment request with a lost server response)
+								if (Config.DEBUG)
+									Log.d(TAG, "Creating new payment request");
+								
 								persistedPaymentRequest = new PersistedPaymentRequest(usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), System.currentTimeMillis());
 								persistencyHandler.add(persistedPaymentRequest);
+							} else {
+								if (Config.DEBUG)
+									Log.d(TAG, "Loaded payment request from internal storage (previous payment request did not receive any server response)");
 							}
 							
 							paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), persistedPaymentRequest.getTimestamp());
@@ -404,15 +445,23 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 						paymentRequestPayer.sign(userInfos.getPrivateKey());
 						
 						ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer);
-						paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
+						
+						if (Config.DEBUG)
+							Log.d(TAG, "About to forward the payment request to the server");
 						
 						timeoutTask = new ServerTimeoutTask();
 						executorService.submit(timeoutTask);
+						
+						paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
 					} catch (Exception e) {
+						Log.wtf(TAG, e);
 						sendError(PaymentError.UNEXPECTED_ERROR);
 					}
 					break;
 				case 2:
+					if (Config.DEBUG)
+						Log.d(TAG, "Received ACK");
+					
 					reset();
 					break;
 				}
@@ -424,6 +473,8 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	@Override
 	public void onServerResponse(ServerPaymentResponse serverPaymentResponse) {
 		terminateTimeoutTask();
+		if (Config.DEBUG)
+			Log.d(TAG, "Received the server response");
 		
 		try {
 			PaymentResponse toProcess = null;
@@ -451,7 +502,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			
 			boolean signatureValid = toProcess.verify(serverInfos.getPublicKey());
 			if (!signatureValid) {
-				Log.d(TAG, "signature not valid");
+				Log.e(TAG, "The signature of the server response is not valid! This might be a Man-In-The-Middle attack, where someone manipulated the server response.");
 				sendError(PaymentError.UNEXPECTED_ERROR);
 			} else {
 				if (persistedPaymentRequest != null)
@@ -459,21 +510,29 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				
 				switch (toProcess.getStatus()) {
 				case FAILURE:
-					Log.d(TAG, "payment failure");
+					if (Config.DEBUG)
+						Log.d(TAG, "The server refused the payment");
+					
 					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
 					break;
 				case SUCCESS:
-					Log.d(TAG, "payment success");
+					if (Config.DEBUG)
+						Log.d(TAG, "The payment request was successful");
+					
 					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, toProcess, null);
 					break;
 				case DUPLICATE_REQUEST:
-					Log.d(TAG, "payment duplicate");
+					if (Config.DEBUG)
+						Log.d(TAG, "This payment request has already been accepted by the server before");
+					
 					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST, null);
 					break;
 				}
 				
 				byte[] encode = toForward.encode();
-				Log.d(TAG, "DBG2: "+Arrays.toString(encode));
+
+				if (Config.DEBUG)
+					Log.d(TAG, "Forwarding the payment response over NFC");
 				
 				switch (paymentType) {
 				case REQUEST_PAYMENT:
@@ -485,7 +544,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				}
 			}
 		} catch (Exception e) {
-			Log.e(TAG, "exception", e);
+			Log.wtf(TAG, e);
 			sendError(PaymentError.UNEXPECTED_ERROR);
 		}
 	}
@@ -504,12 +563,18 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					//countdown reached 0, we wanted to terminate this thread
 				} else {
 					//waiting time elapsed
+					if (Config.DEBUG)
+						Log.d(TAG, "Server response timeout");
+					
 					sendError(PaymentError.NO_SERVER_RESPONSE);
 				}
 			} catch (InterruptedException e) {
 				//the current thread has been interrupted
 				long now = System.currentTimeMillis();
 				if (now - startTime >= Config.SERVER_CALL_TIMEOUT) {
+					if (Config.DEBUG)
+						Log.d(TAG, "Server response timeout");
+					
 					sendError(PaymentError.NO_SERVER_RESPONSE);
 				}
 			}
