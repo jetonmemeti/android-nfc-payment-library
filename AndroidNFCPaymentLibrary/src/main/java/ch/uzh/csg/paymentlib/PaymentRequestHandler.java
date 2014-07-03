@@ -59,11 +59,14 @@ public class PaymentRequestHandler {
 	private IPersistencyHandler persistencyHandler;
 	private MessageHandler messageHandler;
 	
+	private boolean connected = false;
+	
 	private int nofMessages = 0;
 	private boolean aborted = false;
 	
 	private ExecutorService executorService;
 	private ServerTimeoutTask timeoutTask;
+	private boolean startTimeoutTask = false;
 	
 	private PersistedPaymentRequest persistedPaymentRequest;
 	
@@ -140,10 +143,17 @@ public class PaymentRequestHandler {
 				reset();
 				break;
 			case CONNECTION_LOST:
+				connected = false;
 				terminateTimeoutTask();
 				break;
 			case INITIALIZED: //do nothing
+				connected = true;
 				aborted = false;
+				
+				if (startTimeoutTask) {
+					startTimeoutTask = false;
+					startTimeoutTask();
+				}
 				
 				paymentEventHandler.handleMessage(PaymentEvent.INITIALIZED, null, null);
 				nofMessages = 0;
@@ -161,6 +171,17 @@ public class PaymentRequestHandler {
 		
 		nofMessages = 0;
 		persistedPaymentRequest = null;
+		startTimeoutTask = false;
+	}
+	
+	private void startTimeoutTask() {
+		terminateTimeoutTask();
+		
+		if (Config.DEBUG)
+			Log.d(TAG, "Starting new timeout task");
+		
+		timeoutTask = new ServerTimeoutTask();
+		executorService.submit(timeoutTask);
 	}
 	
 	private void terminateTimeoutTask() {
@@ -231,8 +252,7 @@ public class PaymentRequestHandler {
 					
 					byte[] bytes = userInfos.getUsername().getBytes(Charset.forName("UTF-8"));
 					
-					timeoutTask = new ServerTimeoutTask();
-					executorService.submit(timeoutTask);
+					startTimeoutTask();
 					
 					return new PaymentMessage().payee().payload(bytes).bytes();
 				case 2:
@@ -312,8 +332,7 @@ public class PaymentRequestHandler {
 								
 								persistencyHandler.add(persistedPaymentRequest);
 								
-								timeoutTask = new ServerTimeoutTask();
-								executorService.submit(timeoutTask);
+								startTimeoutTask();
 								
 								if (Config.DEBUG)
 									Log.d(TAG, "Returning signed payment request (payer)");
@@ -353,9 +372,11 @@ public class PaymentRequestHandler {
 										pr.sign(userInfos.getPrivateKey());
 										byte[] encoded = pr.encode();
 										
-										timeoutTask = new ServerTimeoutTask();
-										executorService.submit(timeoutTask);
-										
+										if (connected)
+											startTimeoutTask();
+										else
+											startTimeoutTask = true;
+											
 										persistencyHandler.add(persistedPaymentRequest);
 										
 										if (Config.DEBUG)
@@ -457,17 +478,17 @@ public class PaymentRequestHandler {
 				} else {
 					//waiting time elapsed
 					if (Config.DEBUG)
-						Log.d(TAG, "Server response timeout");
+						Log.d(TAG, "Server response timeout (timeout)");
 					
 					reset();
 					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.NO_SERVER_RESPONSE, null);
 				}
-			} catch (InterruptedException e1) {
+			} catch (InterruptedException e) {
 				//the current thread has been interrupted
 				long now = System.currentTimeMillis();
 				if (now - startTime >= Config.SERVER_RESPONSE_TIMEOUT) {
 					if (Config.DEBUG)
-						Log.d(TAG, "Server response timeout");
+						Log.d(TAG, "Server response timeout (interrupted)");
 					
 					reset();
 					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.NO_SERVER_RESPONSE, null);

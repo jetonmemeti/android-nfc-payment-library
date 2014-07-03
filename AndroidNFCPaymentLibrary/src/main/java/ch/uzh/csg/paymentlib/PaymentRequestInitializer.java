@@ -207,6 +207,16 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			disabled = false;
 		}
 	}
+	
+	private void startTimeoutTask() {
+		terminateTimeoutTask();
+		
+		if (Config.DEBUG)
+			Log.d(TAG, "Starting new timeout task");
+		
+		timeoutTask = new ServerTimeoutTask();
+		executorService.submit(timeoutTask);
+	}
 
 	private void terminateTimeoutTask() {
 		if (timeoutTask != null) {
@@ -322,8 +332,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 							if (Config.DEBUG)
 								Log.d(TAG, "About to forward the payment request to the server");
 							
-							timeoutTask = new ServerTimeoutTask();
-							executorService.submit(timeoutTask);
+							startTimeoutTask();
 							
 							paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
 						}
@@ -449,8 +458,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 						if (Config.DEBUG)
 							Log.d(TAG, "About to forward the payment request to the server");
 						
-						timeoutTask = new ServerTimeoutTask();
-						executorService.submit(timeoutTask);
+						startTimeoutTask();
 						
 						paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
 					} catch (Exception e) {
@@ -564,7 +572,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				} else {
 					//waiting time elapsed
 					if (Config.DEBUG)
-						Log.d(TAG, "Server response timeout");
+						Log.d(TAG, "Server response timeout (timeout)");
 					
 					sendError(PaymentError.NO_SERVER_RESPONSE);
 				}
@@ -573,7 +581,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				long now = System.currentTimeMillis();
 				if (now - startTime >= Config.SERVER_CALL_TIMEOUT) {
 					if (Config.DEBUG)
-						Log.d(TAG, "Server response timeout");
+						Log.d(TAG, "Server response timeout (interrupted)");
 					
 					sendError(PaymentError.NO_SERVER_RESPONSE);
 				}
