@@ -45,7 +45,7 @@ import ch.uzh.csg.paymentlib.util.Config;
  */
 public class PaymentRequestInitializer implements IServerResponseListener {
 	
-	public static final String TAG = "PaymentRequestInitializer";
+	public static final String TAG = "ch.uzh.csg.paymentlib.PaymentRequestInitializer";
 	
 	/**
 	 * Defines a Payment type. If the payee (or seller) initiates a payment

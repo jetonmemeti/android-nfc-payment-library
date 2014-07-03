@@ -45,7 +45,7 @@ import ch.uzh.csg.paymentlib.util.Config;
  */
 public class PaymentRequestHandler {
 	
-	public static final String TAG = "PaymentRequestHandler";
+	public static final String TAG = "ch.uzh.csg.paymentlib.PaymentRequestHandler";
 	
 	/**
 	 * The ack message to be returned if the payment finished successfully.
