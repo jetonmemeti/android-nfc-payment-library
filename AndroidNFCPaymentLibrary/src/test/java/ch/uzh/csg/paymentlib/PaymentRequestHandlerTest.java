@@ -32,7 +32,7 @@ import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.nfclib.ISendLater;
-import ch.uzh.csg.nfclib.NfcEvent;
+import ch.uzh.csg.nfclib.events.NfcEvent;
 import ch.uzh.csg.paymentlib.PaymentRequestHandler.MessageHandler;
 import ch.uzh.csg.paymentlib.container.PaymentInfos;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
