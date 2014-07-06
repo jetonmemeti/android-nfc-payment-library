@@ -14,6 +14,7 @@ import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.nfclib.HostApduServiceNfcLib;
+import ch.uzh.csg.nfclib.INfcEventHandler;
 import ch.uzh.csg.nfclib.ISendLater;
 import ch.uzh.csg.nfclib.ITransceiveHandler;
 import ch.uzh.csg.nfclib.NfcEvent;
@@ -128,10 +129,10 @@ public class PaymentRequestHandler {
 			throw new IllegalArgumentException("The persistency handler cannot be null.");
 	}
 	
-	private NfcEvent nfcEventHandler = new NfcEvent() {
+	private INfcEventHandler nfcEventHandler = new INfcEventHandler() {
 		
 		@Override
-		public void handleMessage(Type event, Object object) {
+		public void handleMessage(NfcEvent event, Object object) {
 			if (Config.DEBUG)
 				Log.d(TAG, "Received NfcEvent: "+event);
 		
@@ -216,7 +217,7 @@ public class PaymentRequestHandler {
 	/*
 	 * only for test purposes
 	 */
-	protected NfcEvent getNfcEventHandler() {
+	protected INfcEventHandler getNfcEventHandler() {
 		return nfcEventHandler;
 	}
 	

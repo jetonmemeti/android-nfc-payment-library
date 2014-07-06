@@ -32,7 +32,7 @@ import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.nfclib.ISendLater;
-import ch.uzh.csg.nfclib.NfcEvent.Type;
+import ch.uzh.csg.nfclib.NfcEvent;
 import ch.uzh.csg.paymentlib.PaymentRequestHandler.MessageHandler;
 import ch.uzh.csg.paymentlib.container.PaymentInfos;
 import ch.uzh.csg.paymentlib.container.ServerInfos;
@@ -134,7 +134,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
-		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
+		prh.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
 		
 		// receive payment request
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -213,7 +213,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
-		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
+		prh.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
 		
 		// receive payment request
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -291,7 +291,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
-		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
+		prh.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
 		
 		// receive payment request
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -342,7 +342,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
-		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
+		prh.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
 		
 		// receive payment request
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -425,7 +425,7 @@ public class PaymentRequestHandlerTest {
 
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
-		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
+		prh.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
 
 		// receive payment request
 		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -447,8 +447,8 @@ public class PaymentRequestHandlerTest {
 		assertEquals(1, persistencyHandler.getList().size());
 
 		// assume that the payer removes his device - on re-connect receive the same payment request again
-		prh.getNfcEventHandler().handleMessage(Type.CONNECTION_LOST, null);
-		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
+		prh.getNfcEventHandler().handleMessage(NfcEvent.CONNECTION_LOST, null);
+		prh.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
 		handleMessage = messageHandler.handleMessage(data, sendLater);
 		assertNull(handleMessage);
 		assertNotNull(sendLaterBytes);
@@ -525,7 +525,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayee, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
-		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
+		prh.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
 		
 		// receive request to send username
 		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });
@@ -593,7 +593,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayee, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
-		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
+		prh.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
 		
 		// receive request to send username
 		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });
@@ -658,7 +658,7 @@ public class PaymentRequestHandlerTest {
 		
 		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
 		MessageHandler messageHandler = prh.getMessageHandler();
-		prh.getNfcEventHandler().handleMessage(Type.INITIALIZED, null);
+		prh.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
 		
 		// receive request to send username
 		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });

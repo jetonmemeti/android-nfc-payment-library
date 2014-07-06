@@ -14,6 +14,7 @@ import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
+import ch.uzh.csg.nfclib.INfcEventHandler;
 import ch.uzh.csg.nfclib.NfcEvent;
 import ch.uzh.csg.nfclib.NfcInitiator;
 import ch.uzh.csg.nfclib.NfcLibException;
@@ -156,7 +157,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	}
 	
 	private void initPayment(NfcInitiator nfcTransceiver) throws NfcLibException {
-		NfcEvent nfcEventHandler;
+		INfcEventHandler nfcEventHandler;
 		if (this.paymentType == PaymentType.REQUEST_PAYMENT)
 			nfcEventHandler = nfcEventHandlerRequest;
 		else
@@ -243,7 +244,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	/*
 	 * only for test purposes
 	 */
-	protected NfcEvent getNfcEventHandler() {
+	protected INfcEventHandler getNfcEventHandler() {
 		if (paymentType == PaymentType.REQUEST_PAYMENT)
 			return nfcEventHandlerRequest;
 		else if (paymentType == PaymentType.SEND_PAYMENT)
@@ -252,10 +253,10 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			return null;
 	}
 	
-	private NfcEvent nfcEventHandlerRequest = new NfcEvent() {
+	private INfcEventHandler nfcEventHandlerRequest = new INfcEventHandler() {
 		
 		@Override
-		public void handleMessage(Type event, Object object) {
+		public void handleMessage(NfcEvent event, Object object) {
 			if (Config.DEBUG)
 				Log.d(TAG, "Received NfcEvent: "+event);
 			
@@ -353,10 +354,10 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		}
 	};
 	
-	private NfcEvent nfcEventHandlerSend = new NfcEvent() {
+	private INfcEventHandler nfcEventHandlerSend = new INfcEventHandler() {
 		
 		@Override
-		public void handleMessage(Type event, Object object) {	
+		public void handleMessage(NfcEvent event, Object object) {	
 			if (Config.DEBUG)
 				Log.d(TAG, "Received NfcEvent: "+event);
 			
