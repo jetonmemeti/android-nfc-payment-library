@@ -49,7 +49,7 @@
 	    <dependency>
 			<groupId>ch.uzh.csg</groupId>
 			<artifactId>nfclib</artifactId>
-			<version>0.0.4</version>
+			<version>0.1.0</version>
 	    </dependency>
 	</dependencies>
 	
