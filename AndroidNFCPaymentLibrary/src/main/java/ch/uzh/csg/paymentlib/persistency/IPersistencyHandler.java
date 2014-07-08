@@ -26,16 +26,28 @@ public interface IPersistencyHandler {
 	public PersistedPaymentRequest getPersistedPaymentRequest(String username, Currency currency, long amount);
 	
 	/**
-	 * Persists a {@link PersistedPaymentRequest} on the local device.
+	 * Persists a {@link PersistedPaymentRequest} on the local device. Each
+	 * {@link PersistedPaymentRequest} is only persisted once and should be
+	 * assured by the implementation.
+	 * 
+	 * @param paymentRequest
+	 *            the {@link PersistedPaymentRequest} to persist
+	 * @return true if it has successfully been persisted (saved) or it already
+	 *         exists, false otherwise
 	 */
-	public void addPersistedPaymentRequest(PersistedPaymentRequest paymentRequest);
+	public boolean addPersistedPaymentRequest(PersistedPaymentRequest paymentRequest);
 
 	/**
 	 * Deletes a {@link PersistedPaymentRequest} from the local device. If there
 	 * is no such {@link PersistedPaymentRequest} persisted, nothing should
 	 * happen. The implementation should use the equals method of
 	 * {@link PersistedPaymentRequest} to find the object to delete.
+	 * 
+	 * @param paymentRequest
+	 *            the {@link PersistedPaymentRequest} to delete
+	 * @return true if it has successfully been deleted (and saved) or if it
+	 *         does not exist, false otherwise
 	 */
-	public void deletePersistedPaymentRequest(PersistedPaymentRequest paymentRequest);
+	public boolean deletePersistedPaymentRequest(PersistedPaymentRequest paymentRequest);
 	
 }
