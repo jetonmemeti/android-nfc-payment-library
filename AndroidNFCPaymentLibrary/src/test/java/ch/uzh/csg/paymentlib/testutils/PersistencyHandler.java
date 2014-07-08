@@ -24,7 +24,7 @@ public class PersistencyHandler implements IPersistencyHandler {
 	}
 	
 	@Override
-	public void add(PersistedPaymentRequest paymentRequest) {
+	public void addPersistedPaymentRequest(PersistedPaymentRequest paymentRequest) {
 		boolean exists = false;
 		for (PersistedPaymentRequest request : list) {
 			if (request.equals(paymentRequest)) {
@@ -38,7 +38,7 @@ public class PersistencyHandler implements IPersistencyHandler {
 	}
 	
 	@Override
-	public void delete(PersistedPaymentRequest paymentRequest) {
+	public void deletePersistedPaymentRequest(PersistedPaymentRequest paymentRequest) {
 		for (int i=0; i<list.size(); i++) {
 			PersistedPaymentRequest request = list.get(i);
 			if (request.equals(paymentRequest)) {

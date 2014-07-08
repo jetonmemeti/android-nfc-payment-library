@@ -266,7 +266,7 @@ public class PaymentRequestHandler {
 							Log.e(TAG, "The signature of the server response is not valid! This might be a Man-In-The-Middle attack, where someone manipulated the server response.");
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
-							persistencyHandler.delete(persistedPaymentRequest);
+							persistencyHandler.deletePersistedPaymentRequest(persistedPaymentRequest);
 							reset();
 							
 							switch (paymentResponse.getStatus()) {
@@ -331,7 +331,7 @@ public class PaymentRequestHandler {
 								pr.sign(userInfos.getPrivateKey());
 								byte[] encoded = pr.encode();
 								
-								persistencyHandler.add(persistedPaymentRequest);
+								persistencyHandler.addPersistedPaymentRequest(persistedPaymentRequest);
 								
 								startTimeoutTask();
 								
@@ -379,15 +379,15 @@ public class PaymentRequestHandler {
 										else
 											startTimeoutTask = true;
 											
-										persistencyHandler.add(persistedPaymentRequest);
+										persistencyHandler.addPersistedPaymentRequest(persistedPaymentRequest);
 										
 										if (Config.DEBUG)
 											Log.d(TAG, "Returning signed payment request");
 										
-										//TODO: solve problem with get error (resetting etc)! handle in case 2
 										sendLater.sendLater(new PaymentMessage().payload(encoded).bytes());
 									} catch (Exception e) {
 										Log.wtf(TAG, e);
+										//TODO: solve problem with get error (resetting etc)! handle in case 2
 										sendLater.sendLater(getError(PaymentError.UNEXPECTED_ERROR));
 									}
 								}
@@ -424,7 +424,7 @@ public class PaymentRequestHandler {
 							Log.e(TAG, "The signature of the server response is not valid! This might be a Man-In-The-Middle attack, where someone manipulated the server response.");
 							return getError(PaymentError.UNEXPECTED_ERROR);
 						} else {
-							persistencyHandler.delete(persistedPaymentRequest);
+							persistencyHandler.deletePersistedPaymentRequest(persistedPaymentRequest);
 							reset();
 							switch (paymentResponse.getStatus()) {
 							case FAILURE:

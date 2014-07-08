@@ -443,7 +443,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 									Log.d(TAG, "Creating new payment request");
 								
 								persistedPaymentRequest = new PersistedPaymentRequest(usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), System.currentTimeMillis());
-								persistencyHandler.add(persistedPaymentRequest);
+								persistencyHandler.addPersistedPaymentRequest(persistedPaymentRequest);
 							} else {
 								if (Config.DEBUG)
 									Log.d(TAG, "Loaded payment request from internal storage (previous payment request did not receive any server response)");
@@ -515,7 +515,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				sendError(PaymentError.UNEXPECTED_ERROR);
 			} else {
 				if (persistedPaymentRequest != null)
-					persistencyHandler.delete(persistedPaymentRequest);
+					persistencyHandler.deletePersistedPaymentRequest(persistedPaymentRequest);
 				
 				switch (toProcess.getStatus()) {
 				case FAILURE:

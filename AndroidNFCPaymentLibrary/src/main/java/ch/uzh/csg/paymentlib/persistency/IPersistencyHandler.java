@@ -28,7 +28,7 @@ public interface IPersistencyHandler {
 	/**
 	 * Persists a {@link PersistedPaymentRequest} on the local device.
 	 */
-	public void add(PersistedPaymentRequest paymentRequest);
+	public void addPersistedPaymentRequest(PersistedPaymentRequest paymentRequest);
 
 	/**
 	 * Deletes a {@link PersistedPaymentRequest} from the local device. If there
@@ -36,6 +36,6 @@ public interface IPersistencyHandler {
 	 * happen. The implementation should use the equals method of
 	 * {@link PersistedPaymentRequest} to find the object to delete.
 	 */
-	public void delete(PersistedPaymentRequest paymentRequest);
+	public void deletePersistedPaymentRequest(PersistedPaymentRequest paymentRequest);
 	
 }
