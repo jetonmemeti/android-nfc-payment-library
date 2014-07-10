@@ -343,7 +343,6 @@ public class PaymentRequestHandler {
 								if (Config.DEBUG)
 									Log.d(TAG, "Payment request has been rejected by the payer");
 								
-								//TODO: solve problem with get error (resetting etc)! handle in case 2
 								sendLater.sendLater(getError(PaymentError.PAYER_REFUSED));
 							}
 						} else {
@@ -387,7 +386,6 @@ public class PaymentRequestHandler {
 										sendLater.sendLater(new PaymentMessage().payload(encoded).bytes());
 									} catch (Exception e) {
 										Log.wtf(TAG, e);
-										//TODO: solve problem with get error (resetting etc)! handle in case 2
 										sendLater.sendLater(getError(PaymentError.UNEXPECTED_ERROR));
 									}
 								}
