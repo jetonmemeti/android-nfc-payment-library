@@ -24,9 +24,6 @@ public class PaymentMessage {
 
 	public static final int HEADER_LENGTH = 1;
 	
-	//TODO: delete
-	public static final byte DEFAULT = 0x00;
-	
 	public static final byte ERROR = 0x01; // if not set, then PROCEED
 	public static final byte PAYER = 0x02; // if not set, then PAYEE
 	public static final byte UNUSED_1 = 0x04;
@@ -132,14 +129,6 @@ public class PaymentMessage {
 	 */
 	public byte[] payload() {
 		return payload;
-	}
-	
-	//TODO: delete?
-	/**
-	 * Returns the header of this message.
-	 */
-	public byte header() {
-		return (byte) header;
 	}
 	
 	/**

@@ -1,6 +1,7 @@
 package ch.uzh.csg.paymentlib;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -146,7 +147,7 @@ public class PaymentRequestHandlerTest {
 		
 		assertNotNull(sendLaterBytes);
 		pm = new PaymentMessage().bytes(sendLaterBytes);
-		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		assertFalse(pm.isError());
 		sendLaterBytes = null;
 		
 		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
@@ -180,7 +181,7 @@ public class PaymentRequestHandlerTest {
 		assertNull(sendLaterBytes);
 		
 		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
-		assertEquals(PaymentMessage.DEFAULT, pm2.header());
+		assertFalse(pm2.isError());
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
@@ -224,7 +225,7 @@ public class PaymentRequestHandlerTest {
 		
 		assertNotNull(sendLaterBytes);
 		PaymentMessage pm = new PaymentMessage().bytes(sendLaterBytes);
-		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		assertFalse(pm.isError());
 		sendLaterBytes = null;
 
 		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
@@ -257,7 +258,7 @@ public class PaymentRequestHandlerTest {
 		assertNull(sendLaterBytes);
 		
 		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
-		assertEquals(PaymentMessage.DEFAULT, pm2.header());
+		assertFalse(pm2.isError());
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
@@ -302,7 +303,7 @@ public class PaymentRequestHandlerTest {
 		
 		assertNotNull(sendLaterBytes);
 		PaymentMessage pm = new PaymentMessage().bytes(sendLaterBytes);
-		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		assertFalse(pm.isError());
 		sendLaterBytes = null;
 		
 		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
@@ -353,7 +354,7 @@ public class PaymentRequestHandlerTest {
 		
 		assertNotNull(sendLaterBytes);
 		PaymentMessage pm = new PaymentMessage().bytes(sendLaterBytes);
-		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		assertFalse(pm.isError());
 		sendLaterBytes = null;
 		
 		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
@@ -388,7 +389,7 @@ public class PaymentRequestHandlerTest {
 		assertNull(sendLaterBytes);
 		
 		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
-		assertEquals(PaymentMessage.DEFAULT, pm2.header());
+		assertFalse(pm2.isError());
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
@@ -435,7 +436,7 @@ public class PaymentRequestHandlerTest {
 		assertNull(handleMessage);
 		assertNotNull(sendLaterBytes);
 		PaymentMessage pm = new PaymentMessage().bytes(sendLaterBytes);
-		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		assertFalse(pm.isError());
 		sendLaterBytes = null;
 		
 		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
@@ -453,7 +454,7 @@ public class PaymentRequestHandlerTest {
 		assertNull(handleMessage);
 		assertNotNull(sendLaterBytes);
 		pm = new PaymentMessage().bytes(sendLaterBytes);
-		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		assertFalse(pm.isError());
 		sendLaterBytes = null;
 		
 		paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
@@ -487,7 +488,7 @@ public class PaymentRequestHandlerTest {
 		assertNull(sendLaterBytes);
 		
 		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
-		assertEquals(PaymentMessage.DEFAULT, pm2.header());
+		assertFalse(pm2.isError());
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 
@@ -535,7 +536,7 @@ public class PaymentRequestHandlerTest {
 		assertNull(sendLaterBytes);
 		pm = new PaymentMessage().bytes(handleMessage);
 		
-		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		assertFalse(pm.isError());
 		
 		// receive payment response from server
 		PaymentRequest paymentRequestPayer = new PaymentRequest(userInfosPayer.getPKIAlgorithm(), userInfosPayer.getKeyNumber(), userInfosPayer.getUsername(), userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentInfos.getTimestamp());
@@ -560,7 +561,7 @@ public class PaymentRequestHandlerTest {
 		assertNull(sendLaterBytes);
 		
 		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
-		assertEquals(PaymentMessage.DEFAULT, pm2.header());
+		assertFalse(pm2.isError());
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
@@ -603,7 +604,7 @@ public class PaymentRequestHandlerTest {
 		assertNull(sendLaterBytes);
 		pm = new PaymentMessage().bytes(handleMessage);
 		
-		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		assertFalse(pm.isError());
 		
 		// receive payment response
 		PaymentRequest paymentRequestPayer = new PaymentRequest(userInfosPayer.getPKIAlgorithm(), userInfosPayer.getKeyNumber(), userInfosPayer.getUsername(), userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentInfos.getTimestamp());
@@ -627,7 +628,7 @@ public class PaymentRequestHandlerTest {
 		assertNull(sendLaterBytes);
 		
 		PaymentMessage pm2 = new PaymentMessage().bytes(handleMessage2);
-		assertEquals(PaymentMessage.DEFAULT, pm2.header());
+		assertFalse(pm2.isError());
 		assertEquals(1, pm2.payload().length);
 		assertEquals(PaymentRequestHandler.ACK[0], pm2.payload()[0]);
 		
@@ -668,7 +669,7 @@ public class PaymentRequestHandlerTest {
 		assertNull(sendLaterBytes);
 		pm = new PaymentMessage().bytes(handleMessage);
 		
-		assertEquals(PaymentMessage.DEFAULT, pm.header());
+		assertFalse(pm.isError());
 		
 		Thread.sleep(Config.SERVER_RESPONSE_TIMEOUT+500);
 		

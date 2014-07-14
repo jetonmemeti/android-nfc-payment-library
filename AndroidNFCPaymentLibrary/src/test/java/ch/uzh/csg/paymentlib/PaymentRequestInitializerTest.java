@@ -170,7 +170,7 @@ public class PaymentRequestInitializerTest {
 				Object[] arguments = invocation.getArguments();
 				
 				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.header());
+				assertFalse(pm.isError());
 				
 				byte[] response = new PaymentMessage().error().payload(new byte[] { PaymentError.PAYER_REFUSED.getCode() }).bytes();
 				assertNotNull(response);
@@ -225,7 +225,7 @@ public class PaymentRequestInitializerTest {
 				Object[] arguments = invocation.getArguments();
 				
 				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.header());
+				assertFalse(pm.isError());
 				
 				InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
 				
@@ -244,7 +244,7 @@ public class PaymentRequestInitializerTest {
 				Object[] arguments = invocation.getArguments();
 				
 				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.ERROR, pm.header());
+				assertTrue(pm.isError());
 				
 				byte[] response = new PaymentMessage().error().payload(new byte[] { pm.payload()[0] }).bytes();
 				assertNotNull(response);
@@ -301,7 +301,7 @@ public class PaymentRequestInitializerTest {
 				Object[] arguments = invocation.getArguments();
 				
 				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.header());
+				assertFalse(pm.isError());
 				
 				InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
 				
@@ -320,7 +320,7 @@ public class PaymentRequestInitializerTest {
 				Object[] arguments = invocation.getArguments();
 				
 				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.header());
+				assertFalse(pm.isError());
 				
 				PaymentResponse pr = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 				assertNotNull(pr);
@@ -383,7 +383,7 @@ public class PaymentRequestInitializerTest {
 				Object[] arguments = invocation.getArguments();
 				
 				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.header());
+				assertFalse(pm.isError());
 				
 				InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
 				
@@ -402,7 +402,7 @@ public class PaymentRequestInitializerTest {
 				Object[] arguments = invocation.getArguments();
 				
 				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.header());
+				assertFalse(pm.isError());
 				
 				PaymentResponse pr = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 				assertNotNull(pr);
@@ -469,7 +469,7 @@ public class PaymentRequestInitializerTest {
 				Object[] arguments = invocation.getArguments();
 				
 				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.header());
+				assertFalse(pm.isError());
 				
 				InitMessagePayee initMessage = DecoderFactory.decode(InitMessagePayee.class, pm.payload());
 				
@@ -488,7 +488,7 @@ public class PaymentRequestInitializerTest {
 				Object[] arguments = invocation.getArguments();
 				
 				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.ERROR, pm.header());
+				assertTrue(pm.isError());
 				assertEquals(1, pm.payload().length);
 				assertEquals(PaymentError.NO_SERVER_RESPONSE.getCode(), pm.payload()[0]);
 				
@@ -791,7 +791,7 @@ public class PaymentRequestInitializerTest {
 				Object[] arguments = invocation.getArguments();
 				
 				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
-				assertEquals(PaymentMessage.DEFAULT, pm.header());
+				assertFalse(pm.isError());
 				
 				byte header = (byte) 0xC0; // 11000000
 				byte[] response = new PaymentMessage().bytes(new byte[] { header }).bytes();
