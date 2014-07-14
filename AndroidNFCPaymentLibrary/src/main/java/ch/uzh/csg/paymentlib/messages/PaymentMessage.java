@@ -134,6 +134,7 @@ public class PaymentMessage {
 		return payload;
 	}
 	
+	//TODO: delete?
 	/**
 	 * Returns the header of this message.
 	 */

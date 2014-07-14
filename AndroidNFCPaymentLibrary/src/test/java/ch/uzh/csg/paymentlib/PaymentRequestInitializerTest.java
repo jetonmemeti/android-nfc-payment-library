@@ -770,4 +770,70 @@ public class PaymentRequestInitializerTest {
 		assertEquals(PaymentError.NO_SERVER_RESPONSE, err);
 	}
 	
+	@Test
+	public void testPaymentRequestInitializer_IllegalVersion() throws Exception {
+		reset();
+		
+		KeyPair keyPairPayee = TestUtils.generateKeyPair();
+		KeyPair keyPairServer = TestUtils.generateKeyPair();
+		
+		UserInfos userInfos = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
+		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
+		
+		NfcInitiator transceiver = mock(NfcInitiator.class);
+		
+		final PaymentRequestInitializer pri = new PaymentRequestInitializer(hostActivity, transceiver, paymentEventHandler, userInfos, paymentInfos, serverInfos, persistencyHandler, PaymentType.REQUEST_PAYMENT);
+		
+		Stubber stubber = doAnswer(new Answer<Integer>() {
+			@Override
+			public Integer answer(InvocationOnMock invocation) throws Throwable {
+				Object[] arguments = invocation.getArguments();
+				
+				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
+				assertEquals(PaymentMessage.DEFAULT, pm.header());
+				
+				byte header = (byte) 0xC0; // 11000000
+				byte[] response = new PaymentMessage().bytes(new byte[] { header }).bytes();
+				assertNotNull(response);
+				pri.getNfcEventHandler().handleMessage(NfcEvent.MESSAGE_RECEIVED, response);
+				return null;
+			}
+		}).doAnswer(new Answer<Integer>() {
+			@Override
+			public Integer answer(InvocationOnMock invocation) throws Throwable {
+				Object[] arguments = invocation.getArguments();
+				
+				PaymentMessage pm = new PaymentMessage().bytes((byte[]) arguments[0]);
+				assertTrue(pm.isError());
+				
+				byte header = (byte) 0xC0; // 11000000
+				PaymentMessage response = new PaymentMessage().bytes(new byte[] { header });
+				response = response.error().payload(new byte[] { PaymentError.INCOMPATIBLE_VERSIONS.getCode() });
+				
+				assertNotNull(response);
+				pri.getNfcEventHandler().handleMessage(NfcEvent.MESSAGE_RECEIVED, response.bytes());
+				return null;
+			}
+		});
+		stubber.when(transceiver).transceive(any(byte[].class));
+		
+		//start test case manually, since this would be started on an nfc contact!
+		pri.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
+		
+		assertEquals(0, persistencyHandler.getList().size());
+		
+		verify(transceiver, times(2)).transceive(any(byte[].class));
+		
+		assertEquals(2, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentError);
+		PaymentError err = (PaymentError) state.object;
+		assertEquals(PaymentError.INCOMPATIBLE_VERSIONS, err);
+	}
+	
 }
