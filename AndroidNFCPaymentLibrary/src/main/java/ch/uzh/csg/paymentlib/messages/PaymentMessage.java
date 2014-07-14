@@ -14,15 +14,45 @@ package ch.uzh.csg.paymentlib.messages;
  * 
  */
 public class PaymentMessage {
+	
+	/*
+	 * The number of the first version is 0. Future versions might be 1, 2, or
+	 * 3. Afterwards, a new byte has to be allocated for to contain the version
+	 * number.
+	 */
+	private static final int VERSION = 0;
 
 	public static final int HEADER_LENGTH = 1;
 	
+	//TODO: delete
 	public static final byte DEFAULT = 0x00;
+	
 	public static final byte ERROR = 0x01; // if not set, then PROCEED
 	public static final byte PAYER = 0x02; // if not set, then PAYEE
+	public static final byte UNUSED_1 = 0x04;
+	public static final byte UNUSED_2 = 0x08;
+	public static final byte UNUSED_3 = 0x10;
+	public static final byte UNUSED_4 = 0x20;
 
 	private byte[] payload = new byte[0];
-	private int header = DEFAULT;
+	private int header = VERSION << 6;
+	
+	/**
+	 * Returns the version of this message.
+	 */
+	public int version() {
+		// the version number is encoded in the first two bits
+		return ((header) & 0xC0) >>> 6;
+	}
+	
+	/**
+	 * Returns the highest supported version of Payment Messages. If version()
+	 * returns an higher version that this method, we cannot process that
+	 * message.
+	 */
+	public static int getSupportedVersion() {
+		return VERSION;
+	}
 	
 	/**
 	 * Sets the header of this message to error (other flags are preserved!).
@@ -150,7 +180,7 @@ public class PaymentMessage {
 	}
 	
 	private boolean isEmpty() {
-		return header == 0 && payload.length == 0;
+		return (header << 2) == 0 && payload.length == 0;
 	}
 
 	@Override

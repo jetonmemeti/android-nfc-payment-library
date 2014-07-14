@@ -232,6 +232,14 @@ public class PaymentRequestHandler {
 			
 			nofMessages++;
 			PaymentMessage pm = new PaymentMessage().bytes(message);
+			
+			if (pm.version() > PaymentMessage.getSupportedVersion()) {
+				if (Config.DEBUG)
+					Log.d(TAG, "excepted PaymentMessage version "+PaymentMessage.getSupportedVersion()+" but was "+pm.version());
+				
+				return getError(PaymentError.INCOMPATIBLE_VERSIONS);
+			}
+			
 			if (pm.isError()) {
 				try {
 					if (Config.DEBUG)

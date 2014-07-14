@@ -20,7 +20,8 @@ public enum PaymentError {
 	REQUESTS_NOT_IDENTIC((byte) 0x03),
 	DUPLICATE_REQUEST((byte) 0x04),
 	NO_SERVER_RESPONSE((byte) 0x05), //when no server response received (neither ok nor nok) --> show on gui
-	UNEXPECTED_ERROR((byte) 0x06);
+	UNEXPECTED_ERROR((byte) 0x06),
+	INCOMPATIBLE_VERSIONS((byte) 0x07);
 	
 	private byte code;
 	

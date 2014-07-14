@@ -296,8 +296,16 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					sendError(PaymentError.UNEXPECTED_ERROR);
 					break;
 				}
-				byte[] tmp = (byte[]) object;
-				PaymentMessage response = new PaymentMessage().bytes(tmp);
+				PaymentMessage response = new PaymentMessage().bytes((byte[]) object);
+				
+				if (response.version() > PaymentMessage.getSupportedVersion()) {
+					if (Config.DEBUG)
+						Log.d(TAG, "excepted PaymentMessage version "+PaymentMessage.getSupportedVersion()+" but was "+response.version());
+					
+					sendError(PaymentError.INCOMPATIBLE_VERSIONS);
+					break;
+				}
+				
 				if (response.isError()) {
 					if (Config.DEBUG)
 						Log.d(TAG, "Received PaymentMessage ERROR");
@@ -394,8 +402,16 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					sendError(PaymentError.UNEXPECTED_ERROR);
 					break;
 				}
-				byte[] tmp = (byte[]) object;
-				PaymentMessage response = new PaymentMessage().bytes(tmp);
+				PaymentMessage response = new PaymentMessage().bytes((byte[]) object);
+				
+				if (response.version() > PaymentMessage.getSupportedVersion()) {
+					if (Config.DEBUG)
+						Log.d(TAG, "excepted PaymentMessage version "+PaymentMessage.getSupportedVersion()+" but was "+response.version());
+					
+					sendError(PaymentError.INCOMPATIBLE_VERSIONS);
+					break;
+				}
+				
 				if (response.isError()) {
 					if (Config.DEBUG)
 						Log.d(TAG, "Received PaymentMessage ERROR");
