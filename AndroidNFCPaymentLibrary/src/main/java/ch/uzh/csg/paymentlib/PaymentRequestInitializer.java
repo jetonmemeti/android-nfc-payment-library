@@ -330,7 +330,14 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 							Log.d(TAG, "Received signed payment request from payer");
 						
 						PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, response.payload());
-						PaymentRequest paymentRequestPayee = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), paymentRequestPayer.getUsernamePayer(), userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentRequestPayer.getTimestamp());
+						
+						PaymentRequest paymentRequestPayee;
+						if (paymentInfos.getInputCurrency() == null) {
+							paymentRequestPayee = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), paymentRequestPayer.getUsernamePayer(), userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentRequestPayer.getTimestamp());
+						} else {
+							paymentRequestPayee = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), paymentRequestPayer.getUsernamePayer(), userInfos.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentInfos.getInputCurrency(), paymentInfos.getInputAmount(), paymentRequestPayer.getTimestamp());
+						}
+						
 						if (!paymentRequestPayer.requestsIdentic(paymentRequestPayee)) {
 							Log.e(TAG, "The received payment request does not correspond to the payment request sent. Aborted the payment process.");
 							sendError(PaymentError.REQUESTS_NOT_IDENTIC);
@@ -450,7 +457,12 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 							if (Config.DEBUG)
 								Log.d(TAG, "Payment resume after reconnection");
 							
-							paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), persistedPaymentRequest.getUsername(), persistedPaymentRequest.getCurrency(), persistedPaymentRequest.getAmount(), persistedPaymentRequest.getTimestamp());
+							
+							if (paymentInfos.getInputCurrency() == null) {
+								paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), persistedPaymentRequest.getUsername(), persistedPaymentRequest.getCurrency(), persistedPaymentRequest.getAmount(), persistedPaymentRequest.getTimestamp());
+							} else {
+								paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), persistedPaymentRequest.getUsername(), persistedPaymentRequest.getCurrency(), persistedPaymentRequest.getAmount(), paymentInfos.getInputCurrency(), paymentInfos.getInputAmount(), persistedPaymentRequest.getTimestamp());
+							}
 						} else {
 							// this is a new session
 							persistedPaymentRequest = persistencyHandler.getPersistedPaymentRequest(usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount());
@@ -465,7 +477,11 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 									Log.d(TAG, "Loaded payment request from internal storage (previous payment request did not receive any server response)");
 							}
 							
-							paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), persistedPaymentRequest.getTimestamp());
+							if (paymentInfos.getInputCurrency() == null) {
+								paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), persistedPaymentRequest.getTimestamp());
+							} else {
+								paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentInfos.getInputCurrency(), paymentInfos.getInputAmount(), persistedPaymentRequest.getTimestamp());
+							}
 						}
 						
 						paymentRequestPayer.sign(userInfos.getPrivateKey());
