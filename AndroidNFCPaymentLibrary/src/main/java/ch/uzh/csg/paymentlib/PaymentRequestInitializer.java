@@ -444,26 +444,10 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					String usernamePayee = new String(response.payload(), Charset.forName("UTF-8"));
 					
 					try {
-						PaymentRequest paymentRequestPayer = null;
-						
-						if (persistedPaymentRequest != null
-								&& persistedPaymentRequest.getUsername().equals(usernamePayee)
-								&& persistedPaymentRequest.getCurrency().getCode() == paymentInfos.getCurrency().getCode()
-								&& persistedPaymentRequest.getAmount() == paymentInfos.getAmount()) {
-							/*
-							 * this is a payment resume (the user took his
-							 * device away to accept/reject the payment)
-							 */
-							if (Config.DEBUG)
-								Log.d(TAG, "Payment resume after reconnection");
-							
-							
-							if (paymentInfos.getInputCurrency() == null) {
-								paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), persistedPaymentRequest.getUsername(), persistedPaymentRequest.getCurrency(), persistedPaymentRequest.getAmount(), persistedPaymentRequest.getTimestamp());
-							} else {
-								paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), persistedPaymentRequest.getUsername(), persistedPaymentRequest.getCurrency(), persistedPaymentRequest.getAmount(), paymentInfos.getInputCurrency(), paymentInfos.getInputAmount(), persistedPaymentRequest.getTimestamp());
-							}
-						} else {
+						if (persistedPaymentRequest == null
+								|| !persistedPaymentRequest.getUsername().equals(usernamePayee)
+								|| persistedPaymentRequest.getCurrency().getCode() != paymentInfos.getCurrency().getCode()
+								|| persistedPaymentRequest.getAmount() != paymentInfos.getAmount()) {
 							// this is a new session
 							persistedPaymentRequest = persistencyHandler.getPersistedPaymentRequest(usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount());
 							if (persistedPaymentRequest == null) {
@@ -476,14 +460,21 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 								if (Config.DEBUG)
 									Log.d(TAG, "Loaded payment request from internal storage (previous payment request did not receive any server response)");
 							}
-							
-							if (paymentInfos.getInputCurrency() == null) {
-								paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), persistedPaymentRequest.getTimestamp());
-							} else {
-								paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), usernamePayee, paymentInfos.getCurrency(), paymentInfos.getAmount(), paymentInfos.getInputCurrency(), paymentInfos.getInputAmount(), persistedPaymentRequest.getTimestamp());
-							}
+						} else {
+							/*
+							 * this is a payment resume (the user took his
+							 * device away to accept/reject the payment)
+							 */
+							if (Config.DEBUG)
+								Log.d(TAG, "Payment resume after reconnection");
 						}
 						
+						PaymentRequest paymentRequestPayer = null;
+						if (paymentInfos.getInputCurrency() == null) {
+							paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), persistedPaymentRequest.getUsername(), persistedPaymentRequest.getCurrency(), persistedPaymentRequest.getAmount(), persistedPaymentRequest.getTimestamp());
+						} else {
+							paymentRequestPayer = new PaymentRequest(userInfos.getPKIAlgorithm(), userInfos.getKeyNumber(), userInfos.getUsername(), persistedPaymentRequest.getUsername(), persistedPaymentRequest.getCurrency(), persistedPaymentRequest.getAmount(), paymentInfos.getInputCurrency(), paymentInfos.getInputAmount(), persistedPaymentRequest.getTimestamp());
+						}
 						paymentRequestPayer.sign(userInfos.getPrivateKey());
 						
 						ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer);
