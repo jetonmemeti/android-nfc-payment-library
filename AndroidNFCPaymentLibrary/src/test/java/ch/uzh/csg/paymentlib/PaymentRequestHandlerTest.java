@@ -398,7 +398,7 @@ public class PaymentRequestHandlerTest {
 		assertTrue(pm.isError());
 		assertEquals(PaymentError.UNEXPECTED_ERROR.getCode(), pm.payload()[0]);
 		
-		assertEquals(4, states.size());
+		assertEquals(3, states.size());
 		State state = states.get(0);
 		assertEquals(PaymentEvent.INITIALIZED, state.event);
 		state = states.get(1);
@@ -409,12 +409,6 @@ public class PaymentRequestHandlerTest {
 		assertTrue(state.object instanceof PaymentError);
 		PaymentError err = (PaymentError) state.object;
 		assertEquals(PaymentError.NO_SERVER_RESPONSE, err);
-		state = states.get(3);
-		assertEquals(PaymentEvent.ERROR, state.event);
-		assertNotNull(state.object);
-		assertTrue(state.object instanceof PaymentError);
-		err = (PaymentError) state.object;
-		assertEquals(PaymentError.UNEXPECTED_ERROR, err);
 	}
 	
 	@Test

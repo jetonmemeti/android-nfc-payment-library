@@ -53,7 +53,7 @@ public class PaymentRequestHandler {
 	 */
 	public static final byte[] ACK = new byte[] { (byte) 0xAC };
 	
-	private IPaymentEventHandler paymentEventHandler;
+	private volatile IPaymentEventHandler paymentEventHandler;
 	private UserInfos userInfos;
 	private ServerInfos serverInfos;
 	private IUserPromptPaymentRequest userPrompt;
@@ -63,7 +63,7 @@ public class PaymentRequestHandler {
 	private boolean connected = false;
 	
 	private int nofMessages = 0;
-	private boolean aborted = false;
+	private volatile boolean aborted = false;
 	
 	private ExecutorService executorService;
 	private ServerTimeoutTask timeoutTask;
@@ -197,6 +197,10 @@ public class PaymentRequestHandler {
 		if (Config.DEBUG)
 			Log.d(TAG, "Returning error: "+err);
 		
+		if (err == PaymentError.NO_SERVER_RESPONSE) {
+			terminateTimeoutTask();
+		}
+		
 		aborted = true;
 		reset();
 		
@@ -225,7 +229,7 @@ public class PaymentRequestHandler {
 				Log.d(TAG, "Received PaymentMessage: "+Arrays.toString(message));
 			
 			if (aborted)
-				return getError(PaymentError.UNEXPECTED_ERROR);
+				return new PaymentMessage().error().payload(new byte[] { PaymentError.UNEXPECTED_ERROR.getCode() }).bytes();
 			
 			nofMessages++;
 			PaymentMessage pm = new PaymentMessage().bytes(message);
@@ -482,6 +486,7 @@ public class PaymentRequestHandler {
 						Log.d(TAG, "Server response timeout (timeout)");
 					
 					reset();
+					aborted = true;
 					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.NO_SERVER_RESPONSE, null);
 				}
 			} catch (InterruptedException e) {
@@ -492,6 +497,7 @@ public class PaymentRequestHandler {
 						Log.d(TAG, "Server response timeout (interrupted)");
 					
 					reset();
+					aborted = true;
 					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.NO_SERVER_RESPONSE, null);
 				}
 			}

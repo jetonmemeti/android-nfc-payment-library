@@ -505,6 +505,10 @@ public class PaymentRequestInitializerTest {
 		
 		Thread.sleep(Config.SERVER_CALL_TIMEOUT+500);
 		
+		// simulate a response which comes to late, if this runs through its
+		// fine, if a NPE is thrown, than something is not ok
+		pri.onServerResponse(null);
+		
 		assertEquals(0, persistencyHandler.getList().size());
 		
 		verify(transceiver, times(2)).transceive(any(byte[].class));
