@@ -188,8 +188,6 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		if (Config.DEBUG)
 			Log.d(TAG, "Disable NFC");
 		
-		terminateTimeoutTask();
-		
 		if (!disabled) {
 			nfcTransceiver.disable(activity);
 			disabled = true;
@@ -230,7 +228,6 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	}
 	
 	private synchronized void sendError(PaymentError err) {
-		terminateTimeoutTask();
 		aborted = true;
 		
 		if (Config.DEBUG)
@@ -264,11 +261,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			case INIT_FAILED:
 			case FATAL_ERROR:
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.UNEXPECTED_ERROR, null);
-				terminateTimeoutTask();
 				reset();
 				break;
 			case CONNECTION_LOST:
-				terminateTimeoutTask();
 				break;
 			case INITIALIZED:
 				aborted = false;
@@ -349,7 +344,6 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 								Log.d(TAG, "About to forward the payment request to the server");
 							
 							startTimeoutTask();
-							
 							paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
 						}
 					} catch (Exception e) {
@@ -383,7 +377,6 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 				reset();
 				break;
 			case CONNECTION_LOST:
-				terminateTimeoutTask();
 				break;
 			case INITIALIZED:
 				aborted = false;
@@ -483,7 +476,6 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 							Log.d(TAG, "About to forward the payment request to the server");
 						
 						startTimeoutTask();
-						
 						paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
 					} catch (Exception e) {
 						Log.wtf(TAG, e);
@@ -505,6 +497,10 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 	@Override
 	public void onServerResponse(ServerPaymentResponse serverPaymentResponse) {
 		terminateTimeoutTask();
+		
+		if (aborted)
+			return;
+		
 		if (Config.DEBUG)
 			Log.d(TAG, "Received the server response");
 		
@@ -535,7 +531,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			boolean signatureValid = toProcess.verify(serverInfos.getPublicKey());
 			if (!signatureValid) {
 				Log.e(TAG, "The signature of the server response is not valid! This might be a Man-In-The-Middle attack, where someone manipulated the server response.");
-				sendError(PaymentError.UNEXPECTED_ERROR);
+				sendError(PaymentError.NO_SERVER_RESPONSE);
 			} else {
 				if (persistedPaymentRequest != null)
 					persistencyHandler.deletePersistedPaymentRequest(persistedPaymentRequest);
@@ -577,7 +573,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			}
 		} catch (Exception e) {
 			Log.wtf(TAG, e);
-			sendError(PaymentError.UNEXPECTED_ERROR);
+			sendError(PaymentError.NO_SERVER_RESPONSE);
 		}
 	}
 	

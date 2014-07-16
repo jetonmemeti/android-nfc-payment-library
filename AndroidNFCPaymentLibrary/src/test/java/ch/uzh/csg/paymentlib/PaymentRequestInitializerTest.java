@@ -98,7 +98,6 @@ public class PaymentRequestInitializerTest {
 						Thread.sleep(Config.SERVER_CALL_TIMEOUT+100);
 					} catch (InterruptedException e) {
 					}
-					return;
 				}
 				
 				if (serverRefuse) {
