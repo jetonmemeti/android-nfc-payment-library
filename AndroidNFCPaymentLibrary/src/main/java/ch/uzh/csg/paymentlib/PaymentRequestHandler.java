@@ -140,12 +140,10 @@ public class PaymentRequestHandler {
 			case INIT_FAILED:
 			case FATAL_ERROR:
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.UNEXPECTED_ERROR, null);
-				terminateTimeoutTask();
 				reset();
 				break;
 			case CONNECTION_LOST:
 				connected = false;
-				terminateTimeoutTask();
 				break;
 			case INITIALIZED: //do nothing
 				connected = true;
@@ -199,7 +197,6 @@ public class PaymentRequestHandler {
 		if (Config.DEBUG)
 			Log.d(TAG, "Returning error: "+err);
 		
-		terminateTimeoutTask();
 		aborted = true;
 		reset();
 		
@@ -260,19 +257,14 @@ public class PaymentRequestHandler {
 						Log.d(TAG, "Returning username (payee)");
 					
 					byte[] bytes = userInfos.getUsername().getBytes(Charset.forName("UTF-8"));
-					
-					startTimeoutTask();
-					
 					return new PaymentMessage().payee().payload(bytes).bytes();
 				case 2:
-					terminateTimeoutTask();
-					
 					try {
 						PaymentResponse paymentResponse = DecoderFactory.decode(PaymentResponse.class, pm.payload());
 						boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
 						if (!signatureValid) {
 							Log.e(TAG, "The signature of the server response is not valid! This might be a Man-In-The-Middle attack, where someone manipulated the server response.");
-							return getError(PaymentError.UNEXPECTED_ERROR);
+							return getError(PaymentError.NO_SERVER_RESPONSE);
 						} else {
 							persistencyHandler.deletePersistedPaymentRequest(persistedPaymentRequest);
 							reset();
@@ -428,7 +420,7 @@ public class PaymentRequestHandler {
 						boolean signatureValid = paymentResponse.verify(serverInfos.getPublicKey());
 						if (!signatureValid) {
 							Log.e(TAG, "The signature of the server response is not valid! This might be a Man-In-The-Middle attack, where someone manipulated the server response.");
-							return getError(PaymentError.UNEXPECTED_ERROR);
+							return getError(PaymentError.NO_SERVER_RESPONSE);
 						} else {
 							persistencyHandler.deletePersistedPaymentRequest(persistedPaymentRequest);
 							reset();
@@ -460,7 +452,7 @@ public class PaymentRequestHandler {
 						}
 					} catch (Exception e) {
 						Log.wtf(TAG, e);
-						return getError(PaymentError.UNEXPECTED_ERROR);
+						return getError(PaymentError.NO_SERVER_RESPONSE);
 					}
 				}
 			}

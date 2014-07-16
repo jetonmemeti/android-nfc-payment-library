@@ -277,7 +277,9 @@ public class PaymentRequestHandlerTest {
 	@Test
 	public void testPaymentRequestHandler_Payee_ServerResponseTimeout() throws Exception {
 		/*
-		 * Simulates a server response timeout
+		 * Simulates a server response timeout for the case where the payee
+		 * accepts or rejects the payment request while the devices are always
+		 * connected
 		 */
 		reset();
 
@@ -323,6 +325,96 @@ public class PaymentRequestHandlerTest {
 		assertTrue(state.object instanceof PaymentError);
 		PaymentError err = (PaymentError) state.object;
 		assertEquals(PaymentError.NO_SERVER_RESPONSE, err);
+	}
+	
+	@Test
+	public void testPaymentRequestHandler_Payee_ServerResponseTimeout_interruptConnection() throws Exception {
+		/*
+		 * Simulates a server response timeout for the case where the payee
+		 * accepts or rejects the payment request after the NFC connection has
+		 * been aborted and the devices are re-connected after the payee took
+		 * his decision.
+		 */
+		reset();
+
+		KeyPair keyPairPayee = TestUtils.generateKeyPair();
+		UserInfos userInfosPayee = new UserInfos("seller", keyPairPayee.getPrivate(), PKIAlgorithm.DEFAULT, 1);
+		PaymentInfos paymentInfos = new PaymentInfos(Currency.BTC, 1);
+		
+		KeyPair keyPairPayer = TestUtils.generateKeyPair();
+		KeyPair keyPairServer = TestUtils.generateKeyPair();
+		UserInfos userInfosPayer = new UserInfos("buyer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
+		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
+		
+		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
+		MessageHandler messageHandler = prh.getMessageHandler();
+		prh.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
+		
+		/*
+		 * In real life, the connection would be aborted once the user sees the
+		 * prompt and removes the device to click on 'accept' or 'reject'.
+		 * Instead of refactoring the IUserPromptPaymentRequest, we can fire the
+		 * connection lost event here which results in the same behavior.
+		 */
+		prh.getNfcEventHandler().handleMessage(NfcEvent.CONNECTION_LOST, null);
+		
+		// receive payment request
+		InitMessagePayee initMessage = new InitMessagePayee(userInfosPayee.getUsername(), paymentInfos.getCurrency(), paymentInfos.getAmount());
+		byte[] data = new PaymentMessage().payee().payload(initMessage.encode()).bytes();
+		
+		byte[] handleMessage = messageHandler.handleMessage(data, sendLater);
+		assertNull(handleMessage);
+		
+		assertNotNull(sendLaterBytes);
+		PaymentMessage pm = new PaymentMessage().bytes(sendLaterBytes);
+		assertFalse(pm.isError());
+		sendLaterBytes = null;
+		
+		PaymentRequest paymentRequestPayer = DecoderFactory.decode(PaymentRequest.class, pm.payload());
+		assertEquals(userInfosPayer.getUsername(), paymentRequestPayer.getUsernamePayer());
+		assertEquals(userInfosPayee.getUsername(), paymentRequestPayer.getUsernamePayee());
+		assertEquals(paymentInfos.getCurrency().getCode(), paymentRequestPayer.getCurrency().getCode());
+		assertEquals(paymentInfos.getAmount(), paymentRequestPayer.getAmount());
+		
+		/*
+		 * Once the NFC connection is re-established, the timeout task starts,
+		 * because this is where the signed payment request is sent to the
+		 * counterpart. If no response arrives in the given time, the no server
+		 * response event is fired.
+		 */
+		prh.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
+		
+		Thread.sleep(Config.SERVER_RESPONSE_TIMEOUT+500);
+		
+		/*
+		 * This simulates that the counterpart sends the server response after
+		 * the payee has run into the timeout. The payee should not process that
+		 * data and return an unexpected error.
+		 */
+		data = new PaymentMessage().payee().payload(new byte[] { 0x00, 0x01, 0x02 }).bytes();
+		handleMessage = messageHandler.handleMessage(data, sendLater);
+		pm = new PaymentMessage().bytes(handleMessage);
+		assertNull(sendLaterBytes);
+		assertTrue(pm.isError());
+		assertEquals(PaymentError.UNEXPECTED_ERROR.getCode(), pm.payload()[0]);
+		
+		assertEquals(4, states.size());
+		State state = states.get(0);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(1);
+		assertEquals(PaymentEvent.INITIALIZED, state.event);
+		state = states.get(2);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentError);
+		PaymentError err = (PaymentError) state.object;
+		assertEquals(PaymentError.NO_SERVER_RESPONSE, err);
+		state = states.get(3);
+		assertEquals(PaymentEvent.ERROR, state.event);
+		assertNotNull(state.object);
+		assertTrue(state.object instanceof PaymentError);
+		err = (PaymentError) state.object;
+		assertEquals(PaymentError.UNEXPECTED_ERROR, err);
 	}
 	
 	@Test
@@ -642,46 +734,6 @@ public class PaymentRequestHandlerTest {
 		PaymentResponse pr1 = (PaymentResponse) state.object;
 		assertEquals(userInfosPayer.getUsername(), pr1.getUsernamePayer());
 		assertEquals(userInfosPayee.getUsername(), pr1.getUsernamePayee());
-	}
-	
-	@Test
-	public void testPaymentRequestHandler_Payer_ServerResponseTimeout() throws Exception {
-		/*
-		 * Simulates a server response timeout
-		 */
-		reset();
-
-		KeyPair keyPairPayer = TestUtils.generateKeyPair();
-		UserInfos userInfosPayer = new UserInfos("payer", keyPairPayer.getPrivate(), PKIAlgorithm.DEFAULT, 1);
-		
-		KeyPair keyPairServer = TestUtils.generateKeyPair();
-		ServerInfos serverInfos = new ServerInfos(keyPairServer.getPublic());
-		
-		PaymentRequestHandler prh = new PaymentRequestHandler(hostActivity, paymentEventHandler, userInfosPayer, serverInfos, defaultUserPrompt, persistencyHandler);
-		MessageHandler messageHandler = prh.getMessageHandler();
-		prh.getNfcEventHandler().handleMessage(NfcEvent.INITIALIZED, null);
-		
-		// receive request to send username
-		PaymentMessage pm = new PaymentMessage().payer().payload(new byte[] { 0x00 });
-		assertTrue(pm.isPayer());
-		
-		byte[] handleMessage = messageHandler.handleMessage(pm.bytes(), sendLater);
-		assertNull(sendLaterBytes);
-		pm = new PaymentMessage().bytes(handleMessage);
-		
-		assertFalse(pm.isError());
-		
-		Thread.sleep(Config.SERVER_RESPONSE_TIMEOUT+500);
-		
-		assertEquals(2, states.size());
-		State state = states.get(0);
-		assertEquals(PaymentEvent.INITIALIZED, state.event);
-		state = states.get(1);
-		assertEquals(PaymentEvent.ERROR, state.event);
-		assertNotNull(state.object);
-		assertTrue(state.object instanceof PaymentError);
-		PaymentError err = (PaymentError) state.object;
-		assertEquals(PaymentError.NO_SERVER_RESPONSE, err);
 	}
 	
 	@Test
