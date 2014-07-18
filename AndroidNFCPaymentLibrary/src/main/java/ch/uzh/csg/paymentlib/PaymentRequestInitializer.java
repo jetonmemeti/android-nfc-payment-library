@@ -175,6 +175,14 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		}
 	}
 	
+	//TODO: javadoc
+	public void setPaymentInfos(PaymentInfos newPaymentInfos) {
+		if (newPaymentInfos == null)
+			throw new java.lang.IllegalArgumentException("The payment infos can't be null.");
+		
+		this.paymentInfos = newPaymentInfos;
+	}
+	
 	/**
 	 * Disables the NFC capability bound to this activity. This has to be called
 	 * once you want to finish using the NFC streaming or the payment process is
