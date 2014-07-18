@@ -267,6 +267,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			
 			switch (event) {
 			case INIT_FAILED:
+				paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.INIT_FAILED, null);
+				reset();
+				break;
 			case FATAL_ERROR:
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.UNEXPECTED_ERROR, null);
 				reset();
@@ -380,6 +383,9 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			
 			switch (event) {
 			case INIT_FAILED:
+				paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.INIT_FAILED, null);
+				reset();
+				break;
 			case FATAL_ERROR:
 				paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.UNEXPECTED_ERROR, null);
 				reset();
