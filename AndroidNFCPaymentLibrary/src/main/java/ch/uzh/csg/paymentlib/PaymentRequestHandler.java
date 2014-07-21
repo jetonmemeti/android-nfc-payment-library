@@ -167,7 +167,7 @@ public class PaymentRequestHandler {
 		
 	};
 	
-	public synchronized void reset() {
+	private synchronized void reset() {
 		if (Config.DEBUG)
 			Log.d(TAG, "Resetting states");
 		
