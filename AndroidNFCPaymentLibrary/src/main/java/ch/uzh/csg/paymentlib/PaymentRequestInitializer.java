@@ -14,6 +14,7 @@ import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
+import ch.uzh.csg.mbps.customserialization.exceptions.NotSignedException;
 import ch.uzh.csg.nfclib.NfcInitiator;
 import ch.uzh.csg.nfclib.NfcLibException;
 import ch.uzh.csg.nfclib.events.INfcEventHandler;
@@ -175,7 +176,12 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		}
 	}
 	
-	//TODO: javadoc
+	/**
+	 * Replaces the payment infos provided in the constructor with the new ones.
+	 * 
+	 * @param newPaymentInfos
+	 *            the new payment infos
+	 */
 	public void setPaymentInfos(PaymentInfos newPaymentInfos) {
 		if (newPaymentInfos == null)
 			throw new java.lang.IllegalArgumentException("The payment infos can't be null.");
@@ -200,6 +206,25 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			nfcTransceiver.disable(activity);
 			disabled = true;
 		}
+	}
+	
+	/**
+	 * Enables the NFC so that messages can be exchanged.
+	 */
+	public void enableNfc() {
+		nfcTransceiver.enableNfc();
+	}
+	
+	/**
+	 * Soft disables the NFC to prevent devices such as the Samsung Galaxy Note
+	 * 3 (other devices may show the same behavior!) to restart the protocol
+	 * after having send the last message!
+	 * 
+	 * This should be called after a successful communication. Once you want to
+	 * restart the NFC capability, call enableNFC.
+	 */
+	public void disableNfc() {
+		nfcTransceiver.disableNfc();
 	}
 	
 	private void reset() {
@@ -518,76 +543,85 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		if (Config.DEBUG)
 			Log.d(TAG, "Received the server response");
 		
-		try {
-			PaymentResponse toProcess = null;
-			PaymentResponse toForward = null;
+		PaymentResponse toProcess = null;
+		PaymentResponse toForward = null;
 			
-			switch (paymentType) {
-			case REQUEST_PAYMENT:
-				if (serverPaymentResponse.getPaymentResponsePayee() != null) {
-					toProcess = serverPaymentResponse.getPaymentResponsePayee();
-					toForward = serverPaymentResponse.getPaymentResponsePayer();
-				} else {
-					toProcess = serverPaymentResponse.getPaymentResponsePayer();
-					toForward = toProcess;
-				}
-				break;
-			case SEND_PAYMENT:
+		switch (paymentType) {
+		case REQUEST_PAYMENT:
+			if (serverPaymentResponse.getPaymentResponsePayee() != null) {
+				toProcess = serverPaymentResponse.getPaymentResponsePayee();
+				toForward = serverPaymentResponse.getPaymentResponsePayer();
+			} else {
 				toProcess = serverPaymentResponse.getPaymentResponsePayer();
-				if (serverPaymentResponse.getPaymentResponsePayee() != null) {
-					toForward = serverPaymentResponse.getPaymentResponsePayee();
-				} else {
-					toForward = toProcess;
-				}
-				break;
+				toForward = toProcess;
 			}
+			break;
+		case SEND_PAYMENT:
+			toProcess = serverPaymentResponse.getPaymentResponsePayer();
+			if (serverPaymentResponse.getPaymentResponsePayee() != null) {
+				toForward = serverPaymentResponse.getPaymentResponsePayee();
+			} else {
+				toForward = toProcess;
+			}
+			break;
+		}
 			
-			boolean signatureValid = toProcess.verify(serverInfos.getPublicKey());
+		boolean signatureValid = false;
+		try {
+			signatureValid = toProcess.verify(serverInfos.getPublicKey());
 			if (!signatureValid) {
 				Log.e(TAG, "The signature of the server response is not valid! This might be a Man-In-The-Middle attack, where someone manipulated the server response.");
 				sendError(PaymentError.NO_SERVER_RESPONSE);
-			} else {
-				if (persistedPaymentRequest != null)
-					persistencyHandler.deletePersistedPaymentRequest(persistedPaymentRequest);
-				
-				switch (toProcess.getStatus()) {
-				case FAILURE:
-					if (Config.DEBUG)
-						Log.d(TAG, "The server refused the payment");
-					
-					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
-					break;
-				case SUCCESS:
-					if (Config.DEBUG)
-						Log.d(TAG, "The payment request was successful");
-					
-					paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, toProcess, null);
-					break;
-				case DUPLICATE_REQUEST:
-					if (Config.DEBUG)
-						Log.d(TAG, "This payment request has already been accepted by the server before");
-					
-					paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST, null);
-					break;
-				}
-				
-				byte[] encode = toForward.encode();
-
-				if (Config.DEBUG)
-					Log.d(TAG, "Forwarding the payment response over NFC");
-				
-				switch (paymentType) {
-				case REQUEST_PAYMENT:
-					nfcTransceiver.transceive(new PaymentMessage().payee().payload(encode).bytes());
-					break;
-				case SEND_PAYMENT:
-					nfcTransceiver.transceive(new PaymentMessage().payer().payload(encode).bytes());
-					break;
-				}
+				return;
 			}
 		} catch (Exception e) {
 			Log.wtf(TAG, e);
 			sendError(PaymentError.NO_SERVER_RESPONSE);
+			return;
+		}
+		
+		if (persistedPaymentRequest != null)
+			persistencyHandler.deletePersistedPaymentRequest(persistedPaymentRequest);
+		
+		try {
+			byte[] encode = toForward.encode();
+			
+			if (Config.DEBUG)
+				Log.d(TAG, "Forwarding the payment response over NFC");
+			
+			switch (paymentType) {
+			case REQUEST_PAYMENT:
+				nfcTransceiver.transceive(new PaymentMessage().payee().payload(encode).bytes());
+				break;
+			case SEND_PAYMENT:
+				nfcTransceiver.transceive(new PaymentMessage().payer().payload(encode).bytes());
+				break;
+			}
+		} catch (NotSignedException e) {
+			Log.wtf(TAG, e);
+			sendError(PaymentError.NO_SERVER_RESPONSE);
+			return;
+		}
+		
+		switch (toProcess.getStatus()) {
+		case FAILURE:
+			if (Config.DEBUG)
+				Log.d(TAG, "The server refused the payment");
+			
+			paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
+			break;
+		case SUCCESS:
+			if (Config.DEBUG)
+				Log.d(TAG, "The payment request was successful");
+			
+			paymentEventHandler.handleMessage(PaymentEvent.SUCCESS, toProcess, null);
+			break;
+		case DUPLICATE_REQUEST:
+			if (Config.DEBUG)
+				Log.d(TAG, "This payment request has already been accepted by the server before");
+			
+			paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.DUPLICATE_REQUEST, null);
+			break;
 		}
 	}
 	
