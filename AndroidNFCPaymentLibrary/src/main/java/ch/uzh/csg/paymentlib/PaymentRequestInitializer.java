@@ -381,6 +381,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 							
 							startTimeoutTask();
 							paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
+							nfcTransceiver.startPolling();
 						}
 					} catch (Exception e) {
 						Log.wtf(TAG, e);
@@ -516,6 +517,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 						
 						startTimeoutTask();
 						paymentEventHandler.handleMessage(PaymentEvent.FORWARD_TO_SERVER, spr.encode(), PaymentRequestInitializer.this);
+						nfcTransceiver.startPolling();
 					} catch (Exception e) {
 						Log.wtf(TAG, e);
 						sendError(PaymentError.UNEXPECTED_ERROR);
@@ -571,12 +573,12 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			signatureValid = toProcess.verify(serverInfos.getPublicKey());
 			if (!signatureValid) {
 				Log.e(TAG, "The signature of the server response is not valid! This might be a Man-In-The-Middle attack, where someone manipulated the server response.");
-				sendError(PaymentError.NO_SERVER_RESPONSE);
+				sendErrorLater(PaymentError.NO_SERVER_RESPONSE);
 				return;
 			}
 		} catch (Exception e) {
 			Log.wtf(TAG, e);
-			sendError(PaymentError.NO_SERVER_RESPONSE);
+			sendErrorLater(PaymentError.NO_SERVER_RESPONSE);
 			return;
 		}
 		
@@ -589,17 +591,20 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			if (Config.DEBUG)
 				Log.d(TAG, "Forwarding the payment response over NFC");
 			
+			PaymentMessage pm = null;
+			
 			switch (paymentType) {
 			case REQUEST_PAYMENT:
-				nfcTransceiver.transceive(new PaymentMessage().payee().payload(encode).bytes());
+				pm = new PaymentMessage().payee().payload(encode);
 				break;
 			case SEND_PAYMENT:
-				nfcTransceiver.transceive(new PaymentMessage().payer().payload(encode).bytes());
+				pm = new PaymentMessage().payer().payload(encode);
 				break;
 			}
+			nfcTransceiver.sendLater(pm.bytes());
 		} catch (NotSignedException e) {
 			Log.wtf(TAG, e);
-			sendError(PaymentError.NO_SERVER_RESPONSE);
+			sendErrorLater(PaymentError.NO_SERVER_RESPONSE);
 			return;
 		}
 		
@@ -625,6 +630,17 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		}
 	}
 	
+	private void sendErrorLater(PaymentError err) {
+		aborted = true;
+		
+		if (Config.DEBUG)
+			Log.d(TAG, "Sending error: "+err);
+		
+		nfcTransceiver.transceive(new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes());
+		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err, null);
+		reset();
+	}
+	
 	private class ServerTimeoutTask implements Runnable {
 		private final CountDownLatch latch = new CountDownLatch(1);
 		private final long startTime = System.currentTimeMillis();
@@ -642,7 +658,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					if (Config.DEBUG)
 						Log.d(TAG, "Server response timeout (timeout)");
 					
-					sendError(PaymentError.NO_SERVER_RESPONSE);
+					sendErrorLater(PaymentError.NO_SERVER_RESPONSE);
 				}
 			} catch (InterruptedException e) {
 				//the current thread has been interrupted
@@ -651,7 +667,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 					if (Config.DEBUG)
 						Log.d(TAG, "Server response timeout (interrupted)");
 					
-					sendError(PaymentError.NO_SERVER_RESPONSE);
+					sendErrorLater(PaymentError.NO_SERVER_RESPONSE);
 				}
 			}
 		}
