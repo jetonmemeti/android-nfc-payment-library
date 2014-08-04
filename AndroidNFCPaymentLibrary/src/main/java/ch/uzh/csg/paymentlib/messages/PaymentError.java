@@ -25,9 +25,11 @@ public enum PaymentError {
 	INIT_FAILED((byte) 0x08);
 	
 	private byte code;
+	private String errorCause;
 	
 	private PaymentError(byte code) {
 		this.code = code;
+		this.errorCause = null;
 	}
 	
 	/**
@@ -35,6 +37,25 @@ public enum PaymentError {
 	 */
 	public byte getCode() {
 		return code;
+	}
+	
+	/**
+	 * Sets the cause of error description for this event. This is only
+	 * reasonable for the SERVER_REFUSED event.
+	 * 
+	 * @param errorCause
+	 *            the cause of error or description
+	 */
+	public PaymentError setErrorCause(String errorCause) {
+		this.errorCause = errorCause;
+		return this;
+	}
+
+	/**
+	 * Returns the cause of error description if one is set or null.
+	 */
+	public String getErrorCause() {
+		return errorCause;
 	}
 	
 	private static Map<Byte, PaymentError> codeErrorMap = null;

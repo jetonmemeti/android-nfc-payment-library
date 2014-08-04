@@ -613,7 +613,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			if (Config.DEBUG)
 				Log.d(TAG, "The server refused the payment");
 			
-			paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
+			paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED.setErrorCause(toProcess.getReason()), null);
 			break;
 		case SUCCESS:
 			if (Config.DEBUG)
@@ -636,7 +636,7 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		if (Config.DEBUG)
 			Log.d(TAG, "Sending error: "+err);
 		
-		nfcTransceiver.transceive(new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes());
+		nfcTransceiver.sendLater(new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes());
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err, null);
 		reset();
 	}
