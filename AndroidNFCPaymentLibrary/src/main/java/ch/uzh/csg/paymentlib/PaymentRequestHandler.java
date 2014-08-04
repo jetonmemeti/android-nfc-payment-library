@@ -281,7 +281,7 @@ public class PaymentRequestHandler {
 								if (Config.DEBUG)
 									Log.d(TAG, "The server refused the payment");
 								
-								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED.setErrorCause(paymentResponse.getReason()), null);
 								break;
 							case SUCCESS:
 								if (Config.DEBUG)
@@ -436,7 +436,7 @@ public class PaymentRequestHandler {
 								if (Config.DEBUG)
 									Log.d(TAG, "The server refused the payment");
 								
-								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED, null);
+								paymentEventHandler.handleMessage(PaymentEvent.ERROR, PaymentError.SERVER_REFUSED.setErrorCause(paymentResponse.getReason()), null);
 								break;
 							case SUCCESS:
 								if (Config.DEBUG)
