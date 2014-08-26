@@ -107,10 +107,10 @@ public class PaymentInfos {
 			throw new IllegalArgumentException("The currency cannot be null.");
 		
 		if (amount <= 0)
-			throw new IllegalArgumentException("The amount must be greatern than 0.");
+			throw new IllegalArgumentException("The amount must be greater than 0.");
 		
 		if (timestamp <= 0)
-			throw new IllegalArgumentException("The timestamp must be greatern than 0.");
+			throw new IllegalArgumentException("The timestamp must be greater than 0.");
 	}
 	
 	private void checkParams(Currency currency, long amount, Currency inputCurrency, long inputAmount, long timestamp) throws IllegalArgumentException {
@@ -118,16 +118,16 @@ public class PaymentInfos {
 			throw new IllegalArgumentException("The currency cannot be null.");
 		
 		if (amount <= 0)
-			throw new IllegalArgumentException("The amount must be greatern than 0.");
+			throw new IllegalArgumentException("The amount must be greater than 0.");
 		
 		if (inputCurrency == null)
 			throw new IllegalArgumentException("The currency cannot be null.");
 		
-		if (inputAmount <= 0)
-			throw new IllegalArgumentException("The amount must be greatern than 0.");
+		if (inputAmount < 0)
+			throw new IllegalArgumentException("The amount must be greater than 0.");
 		
 		if (timestamp <= 0)
-			throw new IllegalArgumentException("The timestamp must be greatern than 0.");
+			throw new IllegalArgumentException("The timestamp must be greater than 0.");
 	}
 	
 	/**
