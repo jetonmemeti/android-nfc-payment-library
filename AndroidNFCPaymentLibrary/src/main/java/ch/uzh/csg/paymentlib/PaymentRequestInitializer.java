@@ -606,6 +606,10 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 			Log.wtf(TAG, e);
 			sendErrorLater(PaymentError.NO_SERVER_RESPONSE);
 			return;
+		} catch (Exception e1) {
+			Log.e(TAG, "other exception" ,e1);
+			sendErrorLater(PaymentError.UNEXPECTED_ERROR);
+			return;
 		}
 		
 		switch (toProcess.getStatus()) {
@@ -636,7 +640,11 @@ public class PaymentRequestInitializer implements IServerResponseListener {
 		if (Config.DEBUG)
 			Log.d(TAG, "Sending error: "+err);
 		
-		nfcTransceiver.sendLater(new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes());
+		try {
+			nfcTransceiver.sendLater(new PaymentMessage().error().payload(new byte[] { err.getCode() }).bytes());
+		} catch (Exception e) {
+			Log.e(TAG, "error in send error later", e);
+		}
 		paymentEventHandler.handleMessage(PaymentEvent.ERROR, err, null);
 		reset();
 	}
