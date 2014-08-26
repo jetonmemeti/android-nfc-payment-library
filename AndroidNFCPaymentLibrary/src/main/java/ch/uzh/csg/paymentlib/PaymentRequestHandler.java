@@ -13,6 +13,7 @@ import ch.uzh.csg.mbps.customserialization.DecoderFactory;
 import ch.uzh.csg.mbps.customserialization.InitMessagePayee;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
+import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.nfclib.HostApduServiceNfcLib;
 import ch.uzh.csg.nfclib.ISendLater;
 import ch.uzh.csg.nfclib.ITransceiveHandler;
@@ -273,7 +274,9 @@ public class PaymentRequestHandler {
 							Log.e(TAG, "The signature of the server response is not valid! This might be a Man-In-The-Middle attack, where someone manipulated the server response.");
 							return getError(PaymentError.NO_SERVER_RESPONSE);
 						} else {
-							persistencyHandler.deletePersistedPaymentRequest(persistedPaymentRequest);
+							if (paymentResponse.getStatus() != ServerResponseStatus.DUPLICATE_REQUEST)
+								persistencyHandler.deletePersistedPaymentRequest(persistedPaymentRequest);
+							
 							reset();
 							
 							switch (paymentResponse.getStatus()) {
@@ -429,7 +432,9 @@ public class PaymentRequestHandler {
 							Log.e(TAG, "The signature of the server response is not valid! This might be a Man-In-The-Middle attack, where someone manipulated the server response.");
 							return getError(PaymentError.NO_SERVER_RESPONSE);
 						} else {
-							persistencyHandler.deletePersistedPaymentRequest(persistedPaymentRequest);
+							if (paymentResponse.getStatus() != ServerResponseStatus.DUPLICATE_REQUEST)
+								persistencyHandler.deletePersistedPaymentRequest(persistedPaymentRequest);
+							
 							reset();
 							switch (paymentResponse.getStatus()) {
 							case FAILURE:

@@ -97,4 +97,9 @@ public class PersistedPaymentRequest {
 		return true;
 	}
 	
+	@Override
+	public int hashCode() {
+	    return username.hashCode() ^ currencyCode ^ Long.valueOf(amount).hashCode();
+	}
+	
 }
